@@ -1,11 +1,11 @@
 package org.briarproject.android.blogs;
 
 import org.briarproject.android.api.AndroidNotificationManager;
+import org.briarproject.android.api.BackgroundExecutor;
 import org.briarproject.android.controller.handler.ResultExceptionHandler;
 import org.briarproject.android.controller.handler.ResultHandler;
 import org.briarproject.api.blogs.Blog;
 import org.briarproject.api.blogs.BlogManager;
-import org.briarproject.api.db.DatabaseExecutor;
 import org.briarproject.api.db.DbException;
 import org.briarproject.api.db.NoSuchGroupException;
 import org.briarproject.api.db.NoSuchMessageException;
@@ -31,11 +31,11 @@ public class FeedControllerImpl extends BaseControllerImpl
 			Logger.getLogger(FeedControllerImpl.class.getName());
 
 	@Inject
-	FeedControllerImpl(@DatabaseExecutor Executor dbExecutor,
+	FeedControllerImpl(@BackgroundExecutor Executor bgExecutor,
 			LifecycleManager lifecycleManager, EventBus eventBus,
 			AndroidNotificationManager notificationManager,
 			IdentityManager identityManager, BlogManager blogManager) {
-		super(dbExecutor, lifecycleManager, eventBus, notificationManager,
+		super(bgExecutor, lifecycleManager, eventBus, notificationManager,
 				identityManager, blogManager);
 	}
 

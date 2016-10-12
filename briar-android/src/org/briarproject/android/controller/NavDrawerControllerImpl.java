@@ -2,10 +2,10 @@ package org.briarproject.android.controller;
 
 import android.app.Activity;
 
+import org.briarproject.android.api.BackgroundExecutor;
 import org.briarproject.android.api.ReferenceManager;
 import org.briarproject.android.controller.handler.ResultHandler;
 import org.briarproject.api.TransportId;
-import org.briarproject.api.db.DatabaseExecutor;
 import org.briarproject.api.db.DbException;
 import org.briarproject.api.event.Event;
 import org.briarproject.api.event.EventBus;
@@ -40,11 +40,11 @@ public class NavDrawerControllerImpl extends DbControllerImpl
 	private volatile TransportStateListener listener;
 
 	@Inject
-	NavDrawerControllerImpl(@DatabaseExecutor Executor dbExecutor,
+	NavDrawerControllerImpl(@BackgroundExecutor Executor bgExecutor,
 			LifecycleManager lifecycleManager,
 			ReferenceManager referenceManager, PluginManager pluginManager,
 			EventBus eventBus, IdentityManager identityManager) {
-		super(dbExecutor, lifecycleManager);
+		super(bgExecutor, lifecycleManager);
 		this.referenceManager = referenceManager;
 		this.pluginManager = pluginManager;
 		this.eventBus = eventBus;

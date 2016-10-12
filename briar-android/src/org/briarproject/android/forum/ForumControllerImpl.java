@@ -3,6 +3,7 @@ package org.briarproject.android.forum;
 import android.app.Activity;
 import android.support.annotation.Nullable;
 
+import org.briarproject.android.api.BackgroundExecutor;
 import org.briarproject.android.controller.DbControllerImpl;
 import org.briarproject.android.controller.handler.ResultExceptionHandler;
 import org.briarproject.android.controller.handler.ResultHandler;
@@ -11,7 +12,6 @@ import org.briarproject.api.crypto.CryptoComponent;
 import org.briarproject.api.crypto.CryptoExecutor;
 import org.briarproject.api.crypto.KeyParser;
 import org.briarproject.api.crypto.PrivateKey;
-import org.briarproject.api.db.DatabaseExecutor;
 import org.briarproject.api.db.DbException;
 import org.briarproject.api.event.Event;
 import org.briarproject.api.event.EventBus;
@@ -68,13 +68,13 @@ public class ForumControllerImpl extends DbControllerImpl
 	private volatile ForumPostListener listener;
 
 	@Inject
-	ForumControllerImpl(@DatabaseExecutor Executor dbExecutor,
+	ForumControllerImpl(@BackgroundExecutor Executor bgExecutor,
 			LifecycleManager lifecycleManager,
 			@CryptoExecutor Executor cryptoExecutor,
 			ForumPostFactory forumPostFactory, CryptoComponent crypto,
 			ForumManager forumManager, EventBus eventBus,
 			IdentityManager identityManager) {
-		super(dbExecutor, lifecycleManager);
+		super(bgExecutor, lifecycleManager);
 		this.cryptoExecutor = cryptoExecutor;
 		this.forumPostFactory = forumPostFactory;
 		this.crypto = crypto;

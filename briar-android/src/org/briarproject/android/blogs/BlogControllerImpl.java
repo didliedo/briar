@@ -3,11 +3,11 @@ package org.briarproject.android.blogs;
 import android.app.Activity;
 
 import org.briarproject.android.api.AndroidNotificationManager;
+import org.briarproject.android.api.BackgroundExecutor;
 import org.briarproject.android.controller.ActivityLifecycleController;
 import org.briarproject.android.controller.handler.ResultExceptionHandler;
 import org.briarproject.api.blogs.Blog;
 import org.briarproject.api.blogs.BlogManager;
-import org.briarproject.api.db.DatabaseExecutor;
 import org.briarproject.api.db.DbException;
 import org.briarproject.api.event.BlogPostAddedEvent;
 import org.briarproject.api.event.Event;
@@ -37,11 +37,11 @@ public class BlogControllerImpl extends BaseControllerImpl
 	private volatile GroupId groupId = null;
 
 	@Inject
-	BlogControllerImpl(@DatabaseExecutor Executor dbExecutor,
+	BlogControllerImpl(@BackgroundExecutor Executor bgExecutor,
 			LifecycleManager lifecycleManager, EventBus eventBus,
 			AndroidNotificationManager notificationManager,
 			IdentityManager identityManager, BlogManager blogManager) {
-		super(dbExecutor, lifecycleManager, eventBus, notificationManager,
+		super(bgExecutor, lifecycleManager, eventBus, notificationManager,
 				identityManager, blogManager);
 	}
 

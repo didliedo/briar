@@ -16,10 +16,10 @@ import android.support.v4.app.TaskStackBuilder;
 import org.briarproject.R;
 import org.briarproject.android.api.AndroidExecutor;
 import org.briarproject.android.api.AndroidNotificationManager;
+import org.briarproject.android.api.BackgroundExecutor;
 import org.briarproject.android.contact.ConversationActivity;
 import org.briarproject.android.forum.ForumActivity;
 import org.briarproject.api.contact.ContactId;
-import org.briarproject.api.db.DatabaseExecutor;
 import org.briarproject.api.db.DbException;
 import org.briarproject.api.event.BlogPostAddedEvent;
 import org.briarproject.api.event.Event;
@@ -98,7 +98,7 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 	private static final Logger LOG =
 			Logger.getLogger(AndroidNotificationManagerImpl.class.getName());
 
-	private final Executor dbExecutor;
+	private final Executor bgExecutor;
 	private final SettingsManager settingsManager;
 	private final MessagingManager messagingManager;
 	private final AndroidExecutor androidExecutor;
@@ -120,10 +120,10 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 	private volatile Settings settings = new Settings();
 
 	@Inject
-	AndroidNotificationManagerImpl(@DatabaseExecutor Executor dbExecutor,
+	AndroidNotificationManagerImpl(@BackgroundExecutor Executor bgExecutor,
 			SettingsManager settingsManager, MessagingManager messagingManager,
 			AndroidExecutor androidExecutor, Application app) {
-		this.dbExecutor = dbExecutor;
+		this.bgExecutor = bgExecutor;
 		this.settingsManager = settingsManager;
 		this.messagingManager = messagingManager;
 		this.androidExecutor = androidExecutor;
@@ -247,7 +247,7 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 	}
 
 	private void loadSettings() {
-		dbExecutor.execute(new Runnable() {
+		bgExecutor.execute(new Runnable() {
 			@Override
 			public void run() {
 				try {
@@ -676,7 +676,7 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 	}
 
 	private void showNotificationForPrivateConversation(final ContactId c) {
-		dbExecutor.execute(new Runnable() {
+		bgExecutor.execute(new Runnable() {
 			@Override
 			public void run() {
 				try {

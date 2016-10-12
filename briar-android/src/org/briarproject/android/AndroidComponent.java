@@ -4,6 +4,7 @@ import org.briarproject.CoreEagerSingletons;
 import org.briarproject.CoreModule;
 import org.briarproject.android.api.AndroidExecutor;
 import org.briarproject.android.api.AndroidNotificationManager;
+import org.briarproject.android.api.BackgroundExecutor;
 import org.briarproject.android.api.ReferenceManager;
 import org.briarproject.android.report.BriarReportSender;
 import org.briarproject.api.blogs.BlogManager;
@@ -15,7 +16,6 @@ import org.briarproject.api.crypto.CryptoComponent;
 import org.briarproject.api.crypto.CryptoExecutor;
 import org.briarproject.api.crypto.PasswordStrengthEstimator;
 import org.briarproject.api.db.DatabaseConfig;
-import org.briarproject.api.db.DatabaseExecutor;
 import org.briarproject.api.event.EventBus;
 import org.briarproject.api.feed.FeedManager;
 import org.briarproject.api.forum.ForumManager;
@@ -56,8 +56,17 @@ import dagger.Component;
 public interface AndroidComponent extends CoreEagerSingletons {
 
 	// Exposed objects
+
+	@BackgroundExecutor
+	Executor backgroundExecutor();
+
 	@CryptoExecutor
 	Executor cryptoExecutor();
+
+	@IoExecutor
+	Executor ioExecutor();
+
+	AndroidExecutor androidExecutor();
 
 	PasswordStrengthEstimator passwordStrengthIndicator();
 
@@ -68,9 +77,6 @@ public interface AndroidComponent extends CoreEagerSingletons {
 	AuthorFactory authFactory();
 
 	ReferenceManager referenceMangager();
-
-	@DatabaseExecutor
-	Executor databaseExecutor();
 
 	LifecycleManager lifecycleManager();
 
@@ -120,17 +126,15 @@ public interface AndroidComponent extends CoreEagerSingletons {
 
 	IntroductionManager introductionManager();
 
-	AndroidExecutor androidExecutor();
-
 	FeedManager feedManager();
 
-	@IoExecutor
-	Executor ioExecutor();
-
-	void inject(BriarService activity);
+	void inject(BriarService service);
 
 	void inject(BriarReportSender briarReportSender);
 
 	// Eager singleton load
+
 	void inject(AppModule.EagerSingletons init);
+
+	void inject(AndroidSystemModule.EagerSingletons init);
 }

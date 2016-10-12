@@ -4,13 +4,13 @@ import android.support.annotation.CallSuper;
 import android.support.annotation.Nullable;
 
 import org.briarproject.android.api.AndroidNotificationManager;
+import org.briarproject.android.api.BackgroundExecutor;
 import org.briarproject.android.controller.DbControllerImpl;
 import org.briarproject.android.controller.handler.ResultExceptionHandler;
 import org.briarproject.api.blogs.Blog;
 import org.briarproject.api.blogs.BlogCommentHeader;
 import org.briarproject.api.blogs.BlogManager;
 import org.briarproject.api.blogs.BlogPostHeader;
-import org.briarproject.api.db.DatabaseExecutor;
 import org.briarproject.api.db.DbException;
 import org.briarproject.api.event.BlogPostAddedEvent;
 import org.briarproject.api.event.Event;
@@ -49,11 +49,11 @@ abstract class BaseControllerImpl extends DbControllerImpl
 
 	protected volatile OnBlogPostAddedListener listener;
 
-	BaseControllerImpl(@DatabaseExecutor Executor dbExecutor,
+	BaseControllerImpl(@BackgroundExecutor Executor bgExecutor,
 			LifecycleManager lifecycleManager, EventBus eventBus,
 			AndroidNotificationManager notificationManager,
 			IdentityManager identityManager, BlogManager blogManager) {
-		super(dbExecutor, lifecycleManager);
+		super(bgExecutor, lifecycleManager);
 		this.eventBus = eventBus;
 		this.notificationManager = notificationManager;
 		this.identityManager = identityManager;
