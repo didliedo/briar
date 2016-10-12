@@ -41,13 +41,8 @@ import org.briarproject.api.event.InvitationResponseReceivedEvent;
 import org.briarproject.api.event.PrivateMessageReceivedEvent;
 import org.briarproject.api.identity.IdentityManager;
 import org.briarproject.api.identity.LocalAuthor;
-import org.briarproject.api.introduction.IntroductionRequest;
-import org.briarproject.api.introduction.IntroductionResponse;
 import org.briarproject.api.messaging.ConversationManager;
-import org.briarproject.api.messaging.PrivateMessageHeader;
 import org.briarproject.api.plugins.ConnectionRegistry;
-import org.briarproject.api.sharing.InvitationRequest;
-import org.briarproject.api.sharing.InvitationResponse;
 import org.briarproject.api.sync.GroupId;
 
 import java.util.ArrayList;
@@ -170,18 +165,18 @@ public class ContactListFragment extends BaseFragment implements EventListener {
 	}
 
 	@Override
-	public void onResume() {
-		super.onResume();
+	public void onStart() {
+		super.onStart();
 		notificationManager.blockAllContactNotifications();
 		notificationManager.clearAllContactNotifications();
 		eventBus.addListener(this);
-		loadContacts();
+		loadContacts(false);
 		list.startPeriodicUpdate();
 	}
 
 	@Override
-	public void onPause() {
-		super.onPause();
+	public void onStop() {
+		super.onStop();
 		eventBus.removeListener(this);
 		notificationManager.unblockAllContactNotifications();
 		adapter.clear();
@@ -189,7 +184,7 @@ public class ContactListFragment extends BaseFragment implements EventListener {
 		list.stopPeriodicUpdate();
 	}
 
-	private void loadContacts() {
+	private void loadContacts(final boolean clear) {
 		listener.runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
@@ -213,10 +208,10 @@ public class ContactListFragment extends BaseFragment implements EventListener {
 							// Continue
 						}
 					}
-					displayContacts(contacts);
 					long duration = System.currentTimeMillis() - now;
 					if (LOG.isLoggable(INFO))
 						LOG.info("Full load took " + duration + " ms");
+					displayContacts(contacts, clear);
 				} catch (DbException e) {
 					if (LOG.isLoggable(WARNING))
 						LOG.log(WARNING, e.toString(), e);
@@ -225,12 +220,14 @@ public class ContactListFragment extends BaseFragment implements EventListener {
 		});
 	}
 
-	private void displayContacts(final List<ContactListItem> contacts) {
+	private void displayContacts(final List<ContactListItem> contacts,
+			final boolean clear) {
 		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
 			@Override
 			public void run() {
-				if (contacts.size() == 0) list.showData();
+				if (clear) adapter.setItems(contacts);
 				else adapter.addAll(contacts);
+				if (contacts.isEmpty()) list.showData();
 			}
 		});
 	}
@@ -238,9 +235,9 @@ public class ContactListFragment extends BaseFragment implements EventListener {
 	@Override
 	public void eventOccurred(Event e) {
 		if (e instanceof ContactStatusChangedEvent) {
-			LOG.info("Contact Status changed, reloading");
-			// is also broadcast when contact was added
-			loadContacts();
+			LOG.info("Contact status changed, reloading");
+			ContactStatusChangedEvent c = (ContactStatusChangedEvent) e;
+			loadContacts(!c.isActive());
 		} else if (e instanceof ContactConnectedEvent) {
 			setConnected(((ContactConnectedEvent) e).getContactId(), true);
 		} else if (e instanceof ContactDisconnectedEvent) {
@@ -249,58 +246,61 @@ public class ContactListFragment extends BaseFragment implements EventListener {
 			LOG.info("Contact removed");
 			removeItem(((ContactRemovedEvent) e).getContactId());
 		} else if (e instanceof PrivateMessageReceivedEvent) {
-			LOG.info("Message received, update contact");
+			LOG.info("Private message received, reloading count");
 			PrivateMessageReceivedEvent p = (PrivateMessageReceivedEvent) e;
-			PrivateMessageHeader h = p.getMessageHeader();
-			updateItem(p.getGroupId(), ConversationItem.from(h));
+			reloadGroupCount(p.getContactId());
 		} else if (e instanceof IntroductionRequestReceivedEvent) {
-			LOG.info("Introduction Request received, update contact");
-			IntroductionRequestReceivedEvent m =
+			LOG.info("Introduction request received, reloading count");
+			IntroductionRequestReceivedEvent i =
 					(IntroductionRequestReceivedEvent) e;
-			IntroductionRequest ir = m.getIntroductionRequest();
-			updateItem(m.getContactId(), ConversationItem.from(ir));
+			reloadGroupCount(i.getContactId());
 		} else if (e instanceof IntroductionResponseReceivedEvent) {
-			LOG.info("Introduction Response received, update contact");
-			IntroductionResponseReceivedEvent m =
+			LOG.info("Introduction response received, reloading count");
+			IntroductionResponseReceivedEvent i =
 					(IntroductionResponseReceivedEvent) e;
-			IntroductionResponse ir = m.getIntroductionResponse();
-			updateItem(m.getContactId(), ConversationItem.from(ir));
+			reloadGroupCount(i.getContactId());
 		} else if (e instanceof InvitationRequestReceivedEvent) {
-			LOG.info("Invitation Request received, update contact");
-			InvitationRequestReceivedEvent m = (InvitationRequestReceivedEvent) e;
-			InvitationRequest ir = m.getRequest();
-			updateItem(m.getContactId(), ConversationItem.from(ir));
+			LOG.info("Invitation request received, reloading count");
+			InvitationRequestReceivedEvent i =
+					(InvitationRequestReceivedEvent) e;
+			reloadGroupCount(i.getContactId());
 		} else if (e instanceof InvitationResponseReceivedEvent) {
-			LOG.info("Invitation Response received, update contact");
-			InvitationResponseReceivedEvent m =
+			LOG.info("Invitation response received, reloading count");
+			InvitationResponseReceivedEvent i =
 					(InvitationResponseReceivedEvent) e;
-			InvitationResponse ir = m.getResponse();
-			updateItem(m.getContactId(), ConversationItem.from(ir));
+			reloadGroupCount(i.getContactId());
 		}
 	}
 
-	private void updateItem(final ContactId c, final ConversationItem m) {
+	private void reloadGroupCount(final ContactId c) {
+		listener.runOnDbThread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					long now = System.currentTimeMillis();
+					GroupCount count = conversationManager.getGroupCount(c);
+					long duration = System.currentTimeMillis() - now;
+					if (LOG.isLoggable(INFO))
+						LOG.info("Reloading count took " + duration + " ms");
+					updateItem(c, count);
+				} catch (NoSuchContactException e) {
+					// We'll remove the item when we get the event
+				} catch (DbException e) {
+					if (LOG.isLoggable(WARNING))
+						LOG.log(WARNING, e.toString(), e);
+				}
+			}
+		});
+	}
+
+	private void updateItem(final ContactId c, final GroupCount count) {
 		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
 			@Override
 			public void run() {
 				int position = adapter.findItemPosition(c);
 				ContactListItem item = adapter.getItemAt(position);
 				if (item != null) {
-					item.addMessage(m);
-					adapter.updateItemAt(position, item);
-				}
-			}
-		});
-	}
-
-	private void updateItem(final GroupId g, final ConversationItem m) {
-		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
-			@Override
-			public void run() {
-				int position = adapter.findItemPosition(g);
-				ContactListItem item = adapter.getItemAt(position);
-				if (item != null) {
-					item.addMessage(m);
+					item.setGroupCount(count);
 					adapter.updateItemAt(position, item);
 				}
 			}
@@ -308,26 +308,38 @@ public class ContactListFragment extends BaseFragment implements EventListener {
 	}
 
 	private void removeItem(final ContactId c) {
-		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+		// Update via the background executor to avoid races
+		listener.runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
-				int position = adapter.findItemPosition(c);
-				ContactListItem item = adapter.getItemAt(position);
-				if (item != null) adapter.remove(item);
+				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+					@Override
+					public void run() {
+						int position = adapter.findItemPosition(c);
+						ContactListItem item = adapter.getItemAt(position);
+						if (item != null) adapter.remove(item);
+					}
+				});
 			}
 		});
 	}
 
 	private void setConnected(final ContactId c, final boolean connected) {
-		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+		// Update via the background executor to avoid races
+		listener.runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
-				int position = adapter.findItemPosition(c);
-				ContactListItem item = adapter.getItemAt(position);
-				if (item != null) {
-					item.setConnected(connected);
-					adapter.notifyItemChanged(position);
-				}
+				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+					@Override
+					public void run() {
+						int position = adapter.findItemPosition(c);
+						ContactListItem item = adapter.getItemAt(position);
+						if (item != null) {
+							item.setConnected(connected);
+							adapter.notifyItemChanged(position);
+						}
+					}
+				});
 			}
 		});
 	}

@@ -59,7 +59,7 @@ public class ForumActivity extends BriarActivity implements
 	AndroidNotificationManager notificationManager;
 
 	@Inject
-	protected ForumController forumController;
+	ForumController forumController;
 
 	// Protected access for testing
 	protected NestedForumAdapter forumAdapter;
@@ -79,6 +79,8 @@ public class ForumActivity extends BriarActivity implements
 		byte[] b = i.getByteArrayExtra(GROUP_ID);
 		if (b == null) throw new IllegalStateException();
 		groupId = new GroupId(b);
+		forumController.setGroupId(groupId);
+
 		String forumName = i.getStringExtra(FORUM_NAME);
 		if (forumName != null) setTitle(forumName);
 
@@ -92,7 +94,7 @@ public class ForumActivity extends BriarActivity implements
 		forumAdapter = new NestedForumAdapter(this, this, linearLayoutManager);
 		recyclerView.setAdapter(forumAdapter);
 
-		forumController.loadForum(groupId,
+		forumController.loadForum(
 				new UiResultExceptionHandler<List<ForumEntry>, DbException>(
 						this) {
 					@Override
@@ -229,16 +231,16 @@ public class ForumActivity extends BriarActivity implements
 	}
 
 	@Override
-	public void onResume() {
-		super.onResume();
+	public void onStart() {
+		super.onStart();
 		notificationManager.blockNotification(groupId);
 		notificationManager.clearForumPostNotification(groupId);
 		recyclerView.startPeriodicUpdate();
 	}
 
 	@Override
-	public void onPause() {
-		super.onPause();
+	public void onStop() {
+		super.onStop();
 		notificationManager.unblockNotification(groupId);
 		recyclerView.stopPeriodicUpdate();
 	}

@@ -102,10 +102,11 @@ class MessagingManagerImpl extends ConversationClientImpl
 		boolean local = meta.getBoolean("local");
 		boolean read = meta.getBoolean(MSG_KEY_READ);
 		PrivateMessageHeader header = new PrivateMessageHeader(
-				m.getId(), m.getGroupId(), timestamp, contentType, local, read,
+				m.getId(), groupId, timestamp, contentType, local, read,
 				false, false);
+		ContactId contactId = getContactId(groupId);
 		PrivateMessageReceivedEvent event = new PrivateMessageReceivedEvent(
-				header, groupId);
+				header, contactId, groupId);
 		txn.attach(event);
 		trackIncomingMessage(txn, m);
 

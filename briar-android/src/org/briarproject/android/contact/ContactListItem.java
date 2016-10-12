@@ -6,8 +6,6 @@ import org.briarproject.api.identity.LocalAuthor;
 import org.briarproject.api.sync.GroupId;
 import org.jetbrains.annotations.NotNull;
 
-import static org.briarproject.android.contact.ConversationItem.IncomingItem;
-
 // This class is NOT thread-safe
 public class ContactListItem {
 
@@ -25,19 +23,13 @@ public class ContactListItem {
 		this.localAuthor = localAuthor;
 		this.groupId = groupId;
 		this.connected = connected;
-		this.empty = count.getMsgCount() == 0;
-		this.unread = count.getUnreadCount();
-		this.timestamp = count.getLatestMsgTime();
+		setGroupCount(count);
 	}
 
-	void addMessage(ConversationItem message) {
-		empty = empty && message == null;
-		if (message != null) {
-			if (message.getTime() > timestamp) timestamp = message.getTime();
-			if (message instanceof IncomingItem &&
-					!((IncomingItem) message).isRead())
-				unread++;
-		}
+	void setGroupCount(GroupCount count) {
+		empty = count.getMsgCount() == 0;
+		unread = count.getUnreadCount();
+		timestamp = count.getLatestMsgTime();
 	}
 
 	public Contact getContact() {

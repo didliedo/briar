@@ -122,19 +122,16 @@ public class BlogFragment extends BaseFragment implements
 	@Override
 	public void onStart() {
 		super.onStart();
+		// TODO: blogController.onStart()?
 		loadBlog();
-	}
-
-	@Override
-	public void onResume() {
-		super.onResume();
 		loadBlogPosts(false);
 		list.startPeriodicUpdate();
 	}
 
 	@Override
-	public void onPause() {
-		super.onPause();
+	public void onStop() {
+		super.onStop();
+		// TODO: blogController.onStop()?
 		list.stopPeriodicUpdate();
 	}
 
@@ -215,9 +212,11 @@ public class BlogFragment extends BaseFragment implements
 						adapter.add(post);
 						if (local) {
 							list.scrollToPosition(0);
-							displaySnackbar(R.string.blogs_blog_post_created, false);
+							displaySnackbar(R.string.blogs_blog_post_created,
+									false);
 						} else {
-							displaySnackbar(R.string.blogs_blog_post_received, true);
+							displaySnackbar(R.string.blogs_blog_post_received,
+									true);
 						}
 					}
 
@@ -236,16 +235,16 @@ public class BlogFragment extends BaseFragment implements
 						listener) {
 					@Override
 					public void onResultUi(Collection<BlogPostItem> posts) {
-						if (posts.size() > 0) {
+						if (posts.isEmpty()) {
+							list.showData();
+						} else {
 							adapter.addAll(posts);
 							if (reload) list.scrollToPosition(0);
-						} else {
-							list.showData();
 						}
 					}
 
 					@Override
-					public void onExceptionUi(DbException exception) {
+					public void onExceptionUi(DbException e) {
 						// TODO: Decide how to handle errors in the UI
 						finish();
 					}

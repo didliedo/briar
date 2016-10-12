@@ -31,7 +31,6 @@ import org.briarproject.api.event.GroupAddedEvent;
 import org.briarproject.api.event.GroupRemovedEvent;
 import org.briarproject.api.forum.Forum;
 import org.briarproject.api.forum.ForumManager;
-import org.briarproject.api.forum.ForumPostHeader;
 import org.briarproject.api.forum.ForumSharingManager;
 import org.briarproject.api.sync.GroupId;
 
@@ -111,9 +110,8 @@ public class ForumListFragment extends BaseEventFragment implements
 	}
 
 	@Override
-	public void onResume() {
-		super.onResume();
-
+	public void onStart() {
+		super.onStart();
 		notificationManager.blockAllForumPostNotifications();
 		notificationManager.clearAllForumPostNotifications();
 		loadForums();
@@ -122,9 +120,8 @@ public class ForumListFragment extends BaseEventFragment implements
 	}
 
 	@Override
-	public void onPause() {
-		super.onPause();
-
+	public void onStop() {
+		super.onStop();
 		notificationManager.unblockAllForumPostNotifications();
 		adapter.clear();
 		list.showProgressBar();
@@ -156,7 +153,6 @@ public class ForumListFragment extends BaseEventFragment implements
 			@Override
 			public void run() {
 				try {
-					// load forums
 					long now = System.currentTimeMillis();
 					Collection<ForumListItem> forums = new ArrayList<>();
 					for (Forum f : forumManager.getForums()) {
@@ -168,10 +164,10 @@ public class ForumListFragment extends BaseEventFragment implements
 							// Continue
 						}
 					}
-					displayForums(forums);
 					long duration = System.currentTimeMillis() - now;
 					if (LOG.isLoggable(INFO))
 						LOG.info("Full load took " + duration + " ms");
+					displayForums(forums);
 				} catch (DbException e) {
 					if (LOG.isLoggable(WARNING))
 						LOG.log(WARNING, e.toString(), e);
@@ -184,8 +180,8 @@ public class ForumListFragment extends BaseEventFragment implements
 		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
 			@Override
 			public void run() {
-				if (forums.size() > 0) adapter.addAll(forums);
-				else list.showData();
+				if (forums.isEmpty()) list.showData();
+				else adapter.addAll(forums);
 			}
 		});
 	}
@@ -234,8 +230,8 @@ public class ForumListFragment extends BaseEventFragment implements
 		} else if (e instanceof GroupAddedEvent) {
 			GroupAddedEvent g = (GroupAddedEvent) e;
 			if (g.getGroup().getClientId().equals(forumManager.getClientId())) {
-				LOG.info("Forum added, reloading forums");
-				loadForums();
+				LOG.info("Forum added, loading forum");
+				loadForum(g.getGroup().getId());
 			}
 		} else if (e instanceof GroupRemovedEvent) {
 			GroupRemovedEvent g = (GroupRemovedEvent) e;
@@ -245,34 +241,97 @@ public class ForumListFragment extends BaseEventFragment implements
 			}
 		} else if (e instanceof ForumPostReceivedEvent) {
 			ForumPostReceivedEvent f = (ForumPostReceivedEvent) e;
-			LOG.info("Forum post added, updating...");
-			updateItem(f.getGroupId(), f.getForumPostHeader());
+			LOG.info("Forum post added, reloading count");
+			reloadGroupCount(f.getGroupId());
 		} else if (e instanceof ForumInvitationReceivedEvent) {
+			LOG.info("Forum invitation received, reloading available forums");
 			loadAvailableForums();
 		}
 	}
 
-	private void updateItem(final GroupId g, final ForumPostHeader m) {
-		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+	private void loadForum(final GroupId g) {
+		listener.runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
-				int position = adapter.findItemPosition(g);
-				ForumListItem item = adapter.getItemAt(position);
-				if (item != null) {
-					item.addHeader(m);
-					adapter.updateItemAt(position, item);
+				try {
+					long now = System.currentTimeMillis();
+					Forum f = forumManager.getForum(g);
+					GroupCount count = forumManager.getGroupCount(g);
+					long duration = System.currentTimeMillis() - now;
+					if (LOG.isLoggable(INFO))
+						LOG.info("Loading forum took " + duration + " ms");
+					displayForum(f, count);
+				} catch (NoSuchGroupException e) {
+					// No problem
+				} catch (DbException e) {
+					if (LOG.isLoggable(WARNING))
+						LOG.log(WARNING, e.toString(), e);
 				}
 			}
 		});
 	}
 
-	private void removeForum(final GroupId g) {
+	private void displayForum(final Forum f, final GroupCount count) {
 		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
 			@Override
 			public void run() {
-				int position = adapter.findItemPosition(g);
-				ForumListItem item = adapter.getItemAt(position);
-				if (item != null) adapter.remove(item);
+				adapter.add(new ForumListItem(f, count));
+			}
+		});
+	}
+
+	private void reloadGroupCount(final GroupId g) {
+		listener.runOnDbThread(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					long now = System.currentTimeMillis();
+					GroupCount count = forumManager.getGroupCount(g);
+					long duration = System.currentTimeMillis() - now;
+					if (LOG.isLoggable(INFO))
+						LOG.info("Reloading count took " + duration + " ms");
+					updateItem(g, count);
+				} catch (NoSuchGroupException e) {
+					// We'll remove the item when we get the event
+				} catch (DbException e) {
+					if (LOG.isLoggable(WARNING))
+						LOG.log(WARNING, e.toString(), e);
+				}
+			}
+		});
+	}
+
+	private void updateItem(final GroupId g, final GroupCount count) {
+		listener.runOnDbThread(new Runnable() {
+			@Override
+			public void run() {
+				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+					@Override
+					public void run() {
+						int position = adapter.findItemPosition(g);
+						ForumListItem item = adapter.getItemAt(position);
+						if (item != null) {
+							item.setGroupCount(count);
+							adapter.updateItemAt(position, item);
+						}
+					}
+				});
+			}
+		});
+	}
+
+	private void removeForum(final GroupId g) {
+		listener.runOnDbThread(new Runnable() {
+			@Override
+			public void run() {
+				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+					@Override
+					public void run() {
+						int position = adapter.findItemPosition(g);
+						ForumListItem item = adapter.getItemAt(position);
+						if (item != null) adapter.remove(item);
+					}
+				});
 			}
 		});
 	}

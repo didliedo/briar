@@ -63,11 +63,19 @@ abstract class SharingStatusActivity extends BriarActivity {
 	}
 
 	@Override
-	public void onResume() {
-		super.onResume();
-
+	public void onStart() {
+		super.onStart();
 		loadSharedBy();
 		loadSharedWith();
+	}
+
+	@Override
+	public void onStop() {
+		super.onStop();
+		sharedByAdapter.clear();
+		sharedByList.showProgressBar();
+		sharedWithAdapter.clear();
+		sharedWithList.showProgressBar();
 	}
 
 	@Override
@@ -100,8 +108,8 @@ abstract class SharingStatusActivity extends BriarActivity {
 		dbController.runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
-				List<ContactListItem> contactItems = new ArrayList<>();
 				try {
+					List<ContactListItem> contactItems = new ArrayList<>();
 					for (Contact c : getSharedBy()) {
 						LocalAuthor localAuthor = identityManager
 								.getLocalAuthor(c.getLocalAuthorId());
@@ -110,11 +118,11 @@ abstract class SharingStatusActivity extends BriarActivity {
 										groupId, new GroupCount(0, 0, 0));
 						contactItems.add(item);
 					}
+					displaySharedBy(contactItems);
 				} catch (DbException e) {
 					if (LOG.isLoggable(WARNING))
 						LOG.log(WARNING, e.toString(), e);
 				}
-				displaySharedBy(contactItems);
 			}
 		});
 	}
@@ -123,11 +131,8 @@ abstract class SharingStatusActivity extends BriarActivity {
 		runOnUiThreadUnlessDestroyed(new Runnable() {
 			@Override
 			public void run() {
-				if (contacts.isEmpty()) {
-					sharedByList.showData();
-				} else {
-					sharedByAdapter.addAll(contacts);
-				}
+				if (contacts.isEmpty()) sharedByList.showData();
+				else sharedByAdapter.addAll(contacts);
 			}
 		});
 	}
@@ -136,8 +141,8 @@ abstract class SharingStatusActivity extends BriarActivity {
 		dbController.runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
-				List<ContactListItem> contactItems = new ArrayList<>();
 				try {
+					List<ContactListItem> contactItems = new ArrayList<>();
 					for (Contact c : getSharedWith()) {
 						LocalAuthor localAuthor = identityManager
 								.getLocalAuthor(c.getLocalAuthorId());
@@ -146,11 +151,11 @@ abstract class SharingStatusActivity extends BriarActivity {
 										groupId, new GroupCount(0, 0, 0));
 						contactItems.add(item);
 					}
+					displaySharedWith(contactItems);
 				} catch (DbException e) {
 					if (LOG.isLoggable(WARNING))
 						LOG.log(WARNING, e.toString(), e);
 				}
-				displaySharedWith(contactItems);
 			}
 		});
 	}
@@ -159,11 +164,8 @@ abstract class SharingStatusActivity extends BriarActivity {
 		runOnUiThreadUnlessDestroyed(new Runnable() {
 			@Override
 			public void run() {
-				if (contacts.isEmpty()) {
-					sharedWithList.showData();
-				} else {
-					sharedWithAdapter.addAll(contacts);
-				}
+				if (contacts.isEmpty()) sharedWithList.showData();
+				else sharedWithAdapter.addAll(contacts);
 			}
 		});
 	}

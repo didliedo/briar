@@ -12,8 +12,6 @@ import org.briarproject.api.blogs.BlogCommentHeader;
 import org.briarproject.api.blogs.BlogManager;
 import org.briarproject.api.blogs.BlogPostHeader;
 import org.briarproject.api.db.DbException;
-import org.briarproject.api.event.BlogPostAddedEvent;
-import org.briarproject.api.event.Event;
 import org.briarproject.api.event.EventBus;
 import org.briarproject.api.event.EventListener;
 import org.briarproject.api.identity.IdentityManager;
@@ -76,23 +74,36 @@ abstract class BaseControllerImpl extends DbControllerImpl
 	}
 
 	@Override
-	@CallSuper
-	public void eventOccurred(Event e) {
-		if (e instanceof BlogPostAddedEvent) {
-			final BlogPostAddedEvent b = (BlogPostAddedEvent) e;
-			LOG.info("New blog post added");
-			listener.runOnUiThreadUnlessDestroyed(new Runnable() {
-				@Override
-				public void run() {
-					listener.onBlogPostAdded(b.getHeader(), b.isLocal());
-				}
-			});
-		}
-	}
-
-	@Override
 	public void setOnBlogPostAddedListener(OnBlogPostAddedListener listener) {
 		this.listener = listener;
+	}
+
+	void onBlogPostAdded(final BlogPostHeader h, final boolean local) {
+		runOnDbThread(new Runnable() {
+			@Override
+			public void run() {
+				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+					@Override
+					public void run() {
+						listener.onBlogPostAdded(h, local);
+					}
+				});
+			}
+		});
+	}
+
+	void onBlogRemoved() {
+		runOnDbThread(new Runnable() {
+			@Override
+			public void run() {
+				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+					@Override
+					public void run() {
+						listener.onBlogRemoved();
+					}
+				});
+			}
+		});
 	}
 
 	@Override

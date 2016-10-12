@@ -63,8 +63,9 @@ public class ForumControllerImpl extends DbControllerImpl
 	private final Map<MessageId, byte[]> bodyCache = new ConcurrentHashMap<>();
 	private final AtomicLong newestTimeStamp = new AtomicLong();
 
-	private volatile LocalAuthor localAuthor = null;
-	private volatile Forum forum = null;
+	private volatile GroupId groupId;
+	private volatile Forum forum;
+	private volatile LocalAuthor localAuthor;
 	private volatile ForumPostListener listener;
 
 	@Inject
@@ -95,12 +96,12 @@ public class ForumControllerImpl extends DbControllerImpl
 	}
 
 	@Override
-	public void onActivityResume() {
+	public void onActivityStart() {
 		eventBus.addListener(this);
 	}
 
 	@Override
-	public void onActivityPause() {
+	public void onActivityStop() {
 		eventBus.removeListener(this);
 	}
 
@@ -114,20 +115,38 @@ public class ForumControllerImpl extends DbControllerImpl
 		if (e instanceof ForumPostReceivedEvent) {
 			final ForumPostReceivedEvent pe = (ForumPostReceivedEvent) e;
 			if (pe.getGroupId().equals(forum.getId())) {
-				LOG.info("Forum post received, adding...");
-				final ForumPostHeader fph = pe.getForumPostHeader();
-				updateNewestTimestamp(fph.getTimestamp());
+				LOG.info("Forum post received");
+				ForumPostHeader h = pe.getForumPostHeader();
+				updateNewestTimestamp(h.getTimestamp());
+				onForumPostReceived(h);
+			}
+		} else if (e instanceof GroupRemovedEvent) {
+			GroupRemovedEvent g = (GroupRemovedEvent) e;
+			if (g.getGroup().getId().equals(forum.getId())) {
+				LOG.info("Forum removed");
+				onForumRemoved();
+			}
+		}
+	}
+
+	private void onForumPostReceived(final ForumPostHeader h) {
+		runOnDbThread(new Runnable() {
+			@Override
+			public void run() {
 				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
 					@Override
 					public void run() {
-						listener.onForumPostReceived(fph);
+						listener.onForumPostReceived(h);
 					}
 				});
 			}
-		} else if (e instanceof GroupRemovedEvent) {
-			GroupRemovedEvent s = (GroupRemovedEvent) e;
-			if (s.getGroup().getId().equals(forum.getId())) {
-				LOG.info("Forum removed");
+		});
+	}
+
+	private void onForumRemoved() {
+		runOnDbThread(new Runnable() {
+			@Override
+			public void run() {
 				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
 					@Override
 					public void run() {
@@ -135,18 +154,14 @@ public class ForumControllerImpl extends DbControllerImpl
 					}
 				});
 			}
-		}
+		});
 	}
 
-	/**
-	 * This should only be run from the DbThread.
-	 *
-	 * @throws DbException
-	 */
-	private void loadForum(GroupId groupId) throws DbException {
+	@BackgroundExecutor
+	private void loadForum(GroupId g) throws DbException {
 		// Get Forum
 		long now = System.currentTimeMillis();
-		forum = forumManager.getForum(groupId);
+		forum = forumManager.getForum(g);
 		long duration = System.currentTimeMillis() - now;
 		if (LOG.isLoggable(INFO))
 			LOG.info("Loading forum took " + duration + " ms");
@@ -159,30 +174,19 @@ public class ForumControllerImpl extends DbControllerImpl
 			LOG.info("Loading author took " + duration + " ms");
 	}
 
-	/**
-	 * This should only be run from the DbThread.
-	 *
-	 * @throws DbException
-	 */
-	private Collection<ForumPostHeader> loadHeaders() throws DbException {
-		if (forum == null)
-			throw new RuntimeException("Forum has not been initialized");
-
+	@BackgroundExecutor
+	private Collection<ForumPostHeader> loadHeaders(GroupId g)
+			throws DbException {
 		// Get Headers
 		long now = System.currentTimeMillis();
-		Collection<ForumPostHeader> headers =
-				forumManager.getPostHeaders(forum.getId());
+		Collection<ForumPostHeader> headers = forumManager.getPostHeaders(g);
 		long duration = System.currentTimeMillis() - now;
 		if (LOG.isLoggable(INFO))
 			LOG.info("Loading headers took " + duration + " ms");
 		return headers;
 	}
 
-	/**
-	 * This should only be run from the DbThread.
-	 *
-	 * @throws DbException
-	 */
+	@BackgroundExecutor
 	private void loadBodies(Collection<ForumPostHeader> headers)
 			throws DbException {
 		// Get Bodies
@@ -215,18 +219,22 @@ public class ForumControllerImpl extends DbControllerImpl
 	}
 
 	@Override
-	public void loadForum(final GroupId groupId,
+	public void setGroupId(GroupId g) {
+		groupId = g;
+	}
+
+	@Override
+	public void loadForum(
 			final ResultExceptionHandler<List<ForumEntry>, DbException> resultHandler) {
+		if (groupId == null) throw new IllegalStateException();
 		runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
 				LOG.info("Loading forum...");
 				try {
-					if (forum == null) {
-						loadForum(groupId);
-					}
+					if (forum == null) loadForum(groupId);
 					// Get Forum Posts and Bodies
-					Collection<ForumPostHeader> headers = loadHeaders();
+					Collection<ForumPostHeader> headers = loadHeaders(groupId);
 					updateNewestTimeStamp(headers);
 					loadBodies(headers);
 					resultHandler.onResult(buildForumEntries(headers));
@@ -267,12 +275,13 @@ public class ForumControllerImpl extends DbControllerImpl
 
 	@Override
 	public void unsubscribe(final ResultHandler<Boolean> resultHandler) {
-		if (forum == null) return;
+		if (groupId == null) throw new IllegalStateException();
 		runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
 				try {
 					long now = System.currentTimeMillis();
+					if (forum == null) forum = forumManager.getForum(groupId);
 					forumManager.removeForum(forum);
 					long duration = System.currentTimeMillis() - now;
 					if (LOG.isLoggable(INFO))
@@ -294,15 +303,14 @@ public class ForumControllerImpl extends DbControllerImpl
 
 	@Override
 	public void entriesRead(final Collection<ForumEntry> forumEntries) {
-		if (forum == null) return;
+		if (groupId == null) throw new IllegalStateException();
 		runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
 				try {
 					long now = System.currentTimeMillis();
 					for (ForumEntry fe : forumEntries) {
-						forumManager
-								.setReadFlag(forum.getId(), fe.getId(), true);
+						forumManager.setReadFlag(groupId, fe.getId(), true);
 					}
 					long duration = System.currentTimeMillis() - now;
 					if (LOG.isLoggable(INFO))
@@ -324,6 +332,7 @@ public class ForumControllerImpl extends DbControllerImpl
 	@Override
 	public void createPost(final byte[] body, final MessageId parentId,
 			final ResultExceptionHandler<ForumEntry, DbException> resultHandler) {
+		if (groupId == null) throw new IllegalStateException();
 		cryptoExecutor.execute(new Runnable() {
 			@Override
 			public void run() {
@@ -335,9 +344,9 @@ public class ForumControllerImpl extends DbControllerImpl
 					KeyParser keyParser = crypto.getSignatureKeyParser();
 					byte[] b = localAuthor.getPrivateKey();
 					PrivateKey authorKey = keyParser.parsePrivateKey(b);
-					p = forumPostFactory.createPseudonymousPost(
-							forum.getId(), timestamp, parentId, localAuthor,
-							"text/plain", body, authorKey);
+					p = forumPostFactory.createPseudonymousPost(groupId,
+							timestamp, parentId, localAuthor, "text/plain",
+							body, authorKey);
 				} catch (GeneralSecurityException | FormatException e) {
 					throw new RuntimeException(e);
 				}

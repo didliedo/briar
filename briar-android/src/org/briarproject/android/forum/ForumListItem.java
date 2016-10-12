@@ -2,7 +2,6 @@ package org.briarproject.android.forum;
 
 import org.briarproject.api.clients.MessageTracker.GroupCount;
 import org.briarproject.api.forum.Forum;
-import org.briarproject.api.forum.ForumPostHeader;
 
 // This class is NOT thread-safe
 class ForumListItem {
@@ -13,15 +12,13 @@ class ForumListItem {
 
 	ForumListItem(Forum forum, GroupCount count) {
 		this.forum = forum;
-		this.postCount = count.getMsgCount();
-		this.unread = count.getUnreadCount();
-		this.timestamp = count.getLatestMsgTime();
+		setGroupCount(count);
 	}
 
-	void addHeader(ForumPostHeader h) {
-		postCount++;
-		if (!h.isRead()) unread++;
-		if (h.getTimestamp() > timestamp) timestamp = h.getTimestamp();
+	void setGroupCount(GroupCount count) {
+		postCount = count.getMsgCount();
+		unread = count.getUnreadCount();
+		timestamp = count.getLatestMsgTime();
 	}
 
 	Forum getForum() {

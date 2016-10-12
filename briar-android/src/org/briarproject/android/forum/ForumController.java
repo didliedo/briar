@@ -18,7 +18,9 @@ import java.util.List;
 
 public interface ForumController extends ActivityLifecycleController {
 
-	void loadForum(GroupId groupId,
+	void setGroupId(GroupId g);
+
+	void loadForum(
 			ResultExceptionHandler<List<ForumEntry>, DbException> resultHandler);
 
 	@Nullable

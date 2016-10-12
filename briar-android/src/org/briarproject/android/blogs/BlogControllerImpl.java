@@ -1,10 +1,7 @@
 package org.briarproject.android.blogs;
 
-import android.app.Activity;
-
 import org.briarproject.android.api.AndroidNotificationManager;
 import org.briarproject.android.api.BackgroundExecutor;
-import org.briarproject.android.controller.ActivityLifecycleController;
 import org.briarproject.android.controller.handler.ResultExceptionHandler;
 import org.briarproject.api.blogs.Blog;
 import org.briarproject.api.blogs.BlogManager;
@@ -29,7 +26,7 @@ import javax.inject.Inject;
 import static java.util.logging.Level.WARNING;
 
 public class BlogControllerImpl extends BaseControllerImpl
-		implements ActivityLifecycleController, BlogController, EventListener {
+		implements BlogController, EventListener {
 
 	private static final Logger LOG =
 			Logger.getLogger(BlogControllerImpl.class.getName());
@@ -46,24 +43,16 @@ public class BlogControllerImpl extends BaseControllerImpl
 	}
 
 	@Override
-	public void onActivityCreate(Activity activity) {
-	}
-
-	@Override
-	public void onActivityResume() {
-		super.onStart(); // TODO: Should be called when activity starts. #609
+	public void onStart() {
+		super.onStart();
 		notificationManager.blockNotification(groupId);
 		notificationManager.clearBlogPostNotification(groupId);
 	}
 
 	@Override
-	public void onActivityPause() {
-		super.onStop(); // TODO: Should be called when activity stops. #609
+	public void onStop() {
+		super.onStop();
 		notificationManager.unblockNotification(groupId);
-	}
-
-	@Override
-	public void onActivityDestroy() {
 	}
 
 	@Override
@@ -75,20 +64,16 @@ public class BlogControllerImpl extends BaseControllerImpl
 	public void eventOccurred(Event e) {
 		if (groupId == null) throw new IllegalStateException();
 		if (e instanceof BlogPostAddedEvent) {
-			BlogPostAddedEvent s = (BlogPostAddedEvent) e;
-			if (s.getGroupId().equals(groupId)) {
-				super.eventOccurred(e);
+			BlogPostAddedEvent b = (BlogPostAddedEvent) e;
+			if (b.getGroupId().equals(groupId)) {
+				LOG.info("Blog post added");
+				onBlogPostAdded(b.getHeader(), b.isLocal());
 			}
 		} else if (e instanceof GroupRemovedEvent) {
-			GroupRemovedEvent s = (GroupRemovedEvent) e;
-			if (s.getGroup().getId().equals(groupId)) {
+			GroupRemovedEvent g = (GroupRemovedEvent) e;
+			if (g.getGroup().getId().equals(groupId)) {
 				LOG.info("Blog removed");
-				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
-					@Override
-					public void run() {
-						listener.onBlogRemoved();
-					}
-				});
+				onBlogRemoved();
 			}
 		}
 	}
