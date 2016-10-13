@@ -76,6 +76,7 @@ import org.briarproject.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -458,8 +459,7 @@ public class ConversationActivity extends BriarActivity
 		});
 	}
 
-	private void addConversationItem(final ConversationItem item,
-			final boolean markReadIfNew) {
+	private void addConversationItem(final ConversationItem item) {
 		runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
@@ -467,9 +467,16 @@ public class ConversationActivity extends BriarActivity
 					@Override
 					public void run() {
 						adapter.add(item);
-						if (markReadIfNew && item == adapter.getLastItem()) {
-							// TODO: Set the item read?
-							markNewMessageRead(item.getGroupId(), item.getId());
+						// Is this is an incoming item and the latest item?
+						if ((item instanceof IncomingItem) &&
+								item == adapter.getLastItem()) {
+							// Mark it read in the UI
+							((IncomingItem) item).setRead(true);
+							adapter.notifyItemChanged(
+									adapter.getItemCount() - 1);
+							// Mark it read in the DB
+							markMessagesRead(Collections.singletonMap(
+									item.getId(), item.getGroupId()));
 						}
 						// Scroll to the bottom
 						list.scrollToPosition(adapter.getItemCount() - 1);
@@ -484,10 +491,7 @@ public class ConversationActivity extends BriarActivity
 		SparseArray<IncomingItem> list = adapter.getIncomingMessages();
 		for (int i = 0; i < list.size(); i++) {
 			IncomingItem item = list.valueAt(i);
-			if (!item.isRead()) {
-				// TODO: Set the item read?
-				unread.put(item.getId(), item.getGroupId());
-			}
+			if (!item.isRead()) unread.put(item.getId(), item.getGroupId());
 		}
 		if (unread.isEmpty()) return;
 		if (LOG.isLoggable(INFO))
@@ -529,7 +533,7 @@ public class ConversationActivity extends BriarActivity
 			if (p.getGroupId().equals(groupId)) {
 				LOG.info("Message received, adding");
 				PrivateMessageHeader h = p.getMessageHeader();
-				addConversationItem(ConversationItem.from(h), true);
+				addConversationItem(ConversationItem.from(h));
 				loadMessageBody(h.getId());
 			}
 		} else if (e instanceof MessagesSentEvent) {
@@ -563,7 +567,7 @@ public class ConversationActivity extends BriarActivity
 				LOG.info("Introduction request received, adding...");
 				IntroductionRequest ir = event.getIntroductionRequest();
 				ConversationItem item = new ConversationIntroductionInItem(ir);
-				addConversationItem(item, true);
+				addConversationItem(item);
 			}
 		} else if (e instanceof IntroductionResponseReceivedEvent) {
 			IntroductionResponseReceivedEvent event =
@@ -573,7 +577,7 @@ public class ConversationActivity extends BriarActivity
 				IntroductionResponse ir = event.getIntroductionResponse();
 				ConversationItem item =
 						ConversationItem.from(this, contactName, ir);
-				addConversationItem(item, true);
+				addConversationItem(item);
 			}
 		} else if (e instanceof InvitationRequestReceivedEvent) {
 			InvitationRequestReceivedEvent event =
@@ -582,7 +586,7 @@ public class ConversationActivity extends BriarActivity
 				LOG.info("Invitation received, adding...");
 				InvitationRequest ir = event.getRequest();
 				ConversationItem item = ConversationItem.from(ir);
-				addConversationItem(item, true);
+				addConversationItem(item);
 			}
 		} else if (e instanceof InvitationResponseReceivedEvent) {
 			InvitationResponseReceivedEvent event =
@@ -592,24 +596,9 @@ public class ConversationActivity extends BriarActivity
 				InvitationResponse ir = event.getResponse();
 				ConversationItem item =
 						ConversationItem.from(this, contactName, ir);
-				addConversationItem(item, true);
+				addConversationItem(item);
 			}
 		}
-	}
-
-	private void markNewMessageRead(final GroupId g, final MessageId m) {
-		runOnDbThread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					messagingManager.setReadFlag(g, m, true);
-					loadMessages(); // TODO: Why do we reload here?
-				} catch (DbException e) {
-					if (LOG.isLoggable(WARNING))
-						LOG.log(WARNING, e.toString(), e);
-				}
-			}
-		});
 	}
 
 	private void markMessages(final Collection<MessageId> messageIds,
@@ -640,7 +629,6 @@ public class ConversationActivity extends BriarActivity
 
 	@Override
 	public void onSendClick(String text) {
-		markMessagesRead(); // TODO: Why?
 		if (text.equals("")) return;
 		long timestamp = System.currentTimeMillis();
 		timestamp = Math.max(timestamp, getMinTimestampForNewMessage());
@@ -685,7 +673,7 @@ public class ConversationActivity extends BriarActivity
 					ConversationMessageItem item = ConversationItem.from(h);
 					item.setBody(body);
 					bodyCache.put(id, body);
-					addConversationItem(item, false);
+					addConversationItem(item);
 				} catch (DbException e) {
 					if (LOG.isLoggable(WARNING))
 						LOG.log(WARNING, e.toString(), e);
