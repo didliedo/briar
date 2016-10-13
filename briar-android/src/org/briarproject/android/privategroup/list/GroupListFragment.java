@@ -18,8 +18,8 @@ import org.briarproject.android.fragment.BaseFragment;
 import org.briarproject.android.privategroup.list.GroupListController.GroupListListener;
 import org.briarproject.android.privategroup.list.GroupViewHolder.OnGroupRemoveClickListener;
 import org.briarproject.android.view.BriarRecyclerView;
+import org.briarproject.api.clients.MessageTracker.GroupCount;
 import org.briarproject.api.db.DbException;
-import org.briarproject.api.privategroup.GroupMessageHeader;
 import org.briarproject.api.sync.GroupId;
 
 import java.util.Collection;
@@ -119,11 +119,11 @@ public class GroupListFragment extends BaseFragment implements
 
 	@UiThread
 	@Override
-	public void onGroupMessageAdded(GroupMessageHeader header) {
-		int position = adapter.findItemPosition(header.getGroupId());
+	public void onGroupMessageAdded(GroupId groupId, GroupCount count) {
+		int position = adapter.findItemPosition(groupId);
 		GroupItem item = adapter.getItemAt(position);
 		if (item != null) {
-			item.addMessageHeader(header);
+			item.setGroupCount(count);
 			adapter.updateItemAt(position, item);
 		}
 	}

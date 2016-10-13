@@ -3,10 +3,10 @@ package org.briarproject.android.privategroup.list;
 import android.support.annotation.CallSuper;
 
 import org.briarproject.android.api.AndroidNotificationManager;
+import org.briarproject.android.api.BackgroundExecutor;
 import org.briarproject.android.controller.DbControllerImpl;
 import org.briarproject.android.controller.handler.ResultExceptionHandler;
 import org.briarproject.api.clients.MessageTracker.GroupCount;
-import org.briarproject.api.db.DatabaseExecutor;
 import org.briarproject.api.db.DbException;
 import org.briarproject.api.db.NoSuchGroupException;
 import org.briarproject.api.event.Event;
@@ -17,9 +17,9 @@ import org.briarproject.api.event.GroupMessageAddedEvent;
 import org.briarproject.api.event.GroupRemovedEvent;
 import org.briarproject.api.identity.IdentityManager;
 import org.briarproject.api.lifecycle.LifecycleManager;
-import org.briarproject.api.privategroup.GroupMessageHeader;
 import org.briarproject.api.privategroup.PrivateGroup;
 import org.briarproject.api.privategroup.PrivateGroupManager;
+import org.briarproject.api.sync.ClientId;
 import org.briarproject.api.sync.GroupId;
 
 import java.util.ArrayList;
@@ -47,11 +47,11 @@ public class GroupListControllerImpl extends DbControllerImpl
 	protected volatile GroupListListener listener;
 
 	@Inject
-	GroupListControllerImpl(@DatabaseExecutor Executor dbExecutor,
+	GroupListControllerImpl(@BackgroundExecutor Executor bgExecutor,
 			LifecycleManager lifecycleManager, PrivateGroupManager groupManager,
 			EventBus eventBus, AndroidNotificationManager notificationManager,
 			IdentityManager identityManager) {
-		super(dbExecutor, lifecycleManager);
+		super(bgExecutor, lifecycleManager);
 		this.groupManager = groupManager;
 		this.eventBus = eventBus;
 		this.notificationManager = notificationManager;
@@ -83,33 +83,43 @@ public class GroupListControllerImpl extends DbControllerImpl
 	public void eventOccurred(Event e) {
 		if (e instanceof GroupMessageAddedEvent) {
 			GroupMessageAddedEvent g = (GroupMessageAddedEvent) e;
-			LOG.info("New group message added");
-			onGroupMessageAdded(g.getHeader());
+			LOG.info("Private group message added");
+			onGroupMessageAdded(g.getGroupId());
 		} else if (e instanceof GroupAddedEvent) {
 			GroupAddedEvent g = (GroupAddedEvent) e;
-			if (g.getGroup().getClientId().equals(groupManager.getClientId())) {
+			ClientId id = g.getGroup().getClientId();
+			if (id.equals(groupManager.getClientId())) {
 				LOG.info("Private group added");
 				onGroupAdded(g.getGroup().getId());
 			}
 		} else if (e instanceof GroupRemovedEvent) {
 			GroupRemovedEvent g = (GroupRemovedEvent) e;
-			if (g.getGroup().getClientId().equals(groupManager.getClientId())) {
+			ClientId id = g.getGroup().getClientId();
+			if (id.equals(groupManager.getClientId())) {
 				LOG.info("Private group removed");
 				onGroupRemoved(g.getGroup().getId());
 			}
 		}
 	}
 
-	private void onGroupMessageAdded(final GroupMessageHeader header) {
+	private void onGroupMessageAdded(final GroupId g) {
 		runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
-				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
-					@Override
-					public void run() {
-						listener.onGroupMessageAdded(header);
-					}
-				});
+				try {
+					final GroupCount count = groupManager.getGroupCount(g);
+					listener.runOnUiThreadUnlessDestroyed(new Runnable() {
+						@Override
+						public void run() {
+							listener.onGroupMessageAdded(g, count);
+						}
+					});
+				} catch (NoSuchGroupException e) {
+					// We'll remove the group when we get the event
+				} catch (DbException e) {
+					if (LOG.isLoggable(WARNING))
+						LOG.log(WARNING, e.toString(), e);
+				}
 			}
 		});
 	}

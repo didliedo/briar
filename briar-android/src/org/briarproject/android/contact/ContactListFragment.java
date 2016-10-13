@@ -308,7 +308,6 @@ public class ContactListFragment extends BaseFragment implements EventListener {
 	}
 
 	private void removeItem(final ContactId c) {
-		// Update via the background executor to avoid races
 		listener.runOnDbThread(new Runnable() {
 			@Override
 			public void run() {

@@ -11,14 +11,12 @@ import org.briarproject.android.controller.handler.UiResultExceptionHandler;
 import org.briarproject.api.db.DbException;
 import org.briarproject.api.identity.Author;
 import org.briarproject.api.identity.AuthorId;
-import org.briarproject.api.sync.GroupId;
 import org.briarproject.api.sync.MessageId;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricGradleTestRunner;
@@ -112,8 +110,7 @@ public class ForumActivityTest {
 	public void testNestedEntries() {
 		ForumController mc = forumActivity.getController();
 		List<ForumEntry> dummyData = getDummyData();
-		verify(mc, times(1))
-				.loadForum(Mockito.any(GroupId.class), rc.capture());
+		verify(mc, times(1)).loadForum(rc.capture());
 		rc.getValue().onResult(dummyData);
 		NestedForumAdapter adapter = forumActivity.getAdapter();
 		Assert.assertNotNull(adapter);

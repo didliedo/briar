@@ -2,7 +2,6 @@ package org.briarproject.android.privategroup.list;
 
 import org.briarproject.api.clients.MessageTracker.GroupCount;
 import org.briarproject.api.identity.Author;
-import org.briarproject.api.privategroup.GroupMessageHeader;
 import org.briarproject.api.privategroup.PrivateGroup;
 import org.briarproject.api.sync.GroupId;
 import org.jetbrains.annotations.NotNull;
@@ -12,27 +11,20 @@ class GroupItem {
 
 	private final PrivateGroup privateGroup;
 	private int messageCount, unreadCount;
-	private long lastUpdate;
+	private long timestamp;
 	private boolean dissolved;
 
 	GroupItem(@NotNull PrivateGroup privateGroup, @NotNull GroupCount count,
 			boolean dissolved) {
-
 		this.privateGroup = privateGroup;
-		this.messageCount = count.getMsgCount();
-		this.unreadCount = count.getUnreadCount();
-		this.lastUpdate = count.getLatestMsgTime();
 		this.dissolved = dissolved;
+		setGroupCount(count);
 	}
 
-	void addMessageHeader(GroupMessageHeader header) {
-		messageCount++;
-		if (header.getTimestamp() > lastUpdate) {
-			lastUpdate = header.getTimestamp();
-		}
-		if (!header.isRead()) {
-			unreadCount++;
-		}
+	void setGroupCount(GroupCount count) {
+		messageCount = count.getMsgCount();
+		unreadCount = count.getUnreadCount();
+		timestamp = count.getLatestMsgTime();
 	}
 
 	@NotNull
@@ -63,8 +55,8 @@ class GroupItem {
 		return messageCount;
 	}
 
-	long getLastUpdate() {
-		return lastUpdate;
+	long getTimestamp() {
+		return timestamp;
 	}
 
 	int getUnreadCount() {

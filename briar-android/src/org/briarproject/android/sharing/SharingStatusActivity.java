@@ -105,7 +105,7 @@ abstract class SharingStatusActivity extends BriarActivity {
 	}
 
 	private void loadSharedBy() {
-		dbController.runOnDbThread(new Runnable() {
+		runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
 				try {
@@ -138,7 +138,7 @@ abstract class SharingStatusActivity extends BriarActivity {
 	}
 
 	private void loadSharedWith() {
-		dbController.runOnDbThread(new Runnable() {
+		runOnDbThread(new Runnable() {
 			@Override
 			public void run() {
 				try {
