@@ -230,8 +230,8 @@ public class ForumListFragment extends BaseEventFragment implements
 		} else if (e instanceof GroupAddedEvent) {
 			GroupAddedEvent g = (GroupAddedEvent) e;
 			if (g.getGroup().getClientId().equals(forumManager.getClientId())) {
-				LOG.info("Forum added, loading forum");
-				loadForum(g.getGroup().getId());
+				LOG.info("Forum added, reloading forums");
+				loadForums();
 			}
 		} else if (e instanceof GroupRemovedEvent) {
 			GroupRemovedEvent g = (GroupRemovedEvent) e;
@@ -247,37 +247,6 @@ public class ForumListFragment extends BaseEventFragment implements
 			LOG.info("Forum invitation received, reloading available forums");
 			loadAvailableForums();
 		}
-	}
-
-	private void loadForum(final GroupId g) {
-		listener.runOnDbThread(new Runnable() {
-			@Override
-			public void run() {
-				try {
-					long now = System.currentTimeMillis();
-					Forum f = forumManager.getForum(g);
-					GroupCount count = forumManager.getGroupCount(g);
-					long duration = System.currentTimeMillis() - now;
-					if (LOG.isLoggable(INFO))
-						LOG.info("Loading forum took " + duration + " ms");
-					displayForum(f, count);
-				} catch (NoSuchGroupException e) {
-					// No problem
-				} catch (DbException e) {
-					if (LOG.isLoggable(WARNING))
-						LOG.log(WARNING, e.toString(), e);
-				}
-			}
-		});
-	}
-
-	private void displayForum(final Forum f, final GroupCount count) {
-		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
-			@Override
-			public void run() {
-				adapter.add(new ForumListItem(f, count));
-			}
-		});
 	}
 
 	private void reloadGroupCount(final GroupId g) {
@@ -302,20 +271,15 @@ public class ForumListFragment extends BaseEventFragment implements
 	}
 
 	private void updateItem(final GroupId g, final GroupCount count) {
-		listener.runOnDbThread(new Runnable() {
+		listener.runOnUiThreadUnlessDestroyed(new Runnable() {
 			@Override
 			public void run() {
-				listener.runOnUiThreadUnlessDestroyed(new Runnable() {
-					@Override
-					public void run() {
-						int position = adapter.findItemPosition(g);
-						ForumListItem item = adapter.getItemAt(position);
-						if (item != null) {
-							item.setGroupCount(count);
-							adapter.updateItemAt(position, item);
-						}
-					}
-				});
+				int position = adapter.findItemPosition(g);
+				ForumListItem item = adapter.getItemAt(position);
+				if (item != null) {
+					item.setGroupCount(count);
+					adapter.updateItemAt(position, item);
+				}
 			}
 		});
 	}
