@@ -122,7 +122,6 @@ public class BlogFragment extends BaseFragment implements
 	@Override
 	public void onStart() {
 		super.onStart();
-		// TODO: blogController.onStart()?
 		loadBlog();
 		loadBlogPosts(false);
 		list.startPeriodicUpdate();
@@ -131,7 +130,6 @@ public class BlogFragment extends BaseFragment implements
 	@Override
 	public void onStop() {
 		super.onStop();
-		// TODO: blogController.onStop()?
 		list.stopPeriodicUpdate();
 	}
 
@@ -244,7 +242,7 @@ public class BlogFragment extends BaseFragment implements
 					}
 
 					@Override
-					public void onExceptionUi(DbException e) {
+					public void onExceptionUi(DbException exception) {
 						// TODO: Decide how to handle errors in the UI
 						finish();
 					}

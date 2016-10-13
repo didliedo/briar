@@ -1,7 +1,10 @@
 package org.briarproject.android.blogs;
 
+import android.app.Activity;
+
 import org.briarproject.android.api.AndroidNotificationManager;
 import org.briarproject.android.api.BackgroundExecutor;
+import org.briarproject.android.controller.ActivityLifecycleController;
 import org.briarproject.android.controller.handler.ResultExceptionHandler;
 import org.briarproject.api.blogs.Blog;
 import org.briarproject.api.blogs.BlogManager;
@@ -26,7 +29,7 @@ import javax.inject.Inject;
 import static java.util.logging.Level.WARNING;
 
 public class BlogControllerImpl extends BaseControllerImpl
-		implements BlogController, EventListener {
+		implements ActivityLifecycleController, BlogController, EventListener {
 
 	private static final Logger LOG =
 			Logger.getLogger(BlogControllerImpl.class.getName());
@@ -43,16 +46,24 @@ public class BlogControllerImpl extends BaseControllerImpl
 	}
 
 	@Override
-	public void onStart() {
+	public void onActivityCreate(Activity activity) {
+	}
+
+	@Override
+	public void onActivityStart() {
 		super.onStart();
 		notificationManager.blockNotification(groupId);
 		notificationManager.clearBlogPostNotification(groupId);
 	}
 
 	@Override
-	public void onStop() {
+	public void onActivityStop() {
 		super.onStop();
 		notificationManager.unblockNotification(groupId);
+	}
+
+	@Override
+	public void onActivityDestroy() {
 	}
 
 	@Override

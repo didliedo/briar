@@ -110,6 +110,7 @@ public class ActivityModule {
 	@ActivityScope
 	@Provides
 	BlogController provideBlogController(BlogControllerImpl blogController) {
+		activity.addLifecycleController(blogController);
 		return blogController;
 	}
 
