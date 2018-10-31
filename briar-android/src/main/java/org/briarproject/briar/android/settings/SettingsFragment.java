@@ -12,7 +12,6 @@ import android.os.Bundle;
 import android.support.annotation.StringRes;
 import android.support.v14.preference.SwitchPreference;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.text.TextUtilsCompat;
 import android.support.v7.preference.ListPreference;
 import android.support.v7.preference.Preference;
 import android.support.v7.preference.Preference.OnPreferenceChangeListener;
@@ -67,7 +66,6 @@ import static android.provider.Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS;
 import static android.provider.Settings.EXTRA_APP_PACKAGE;
 import static android.provider.Settings.EXTRA_CHANNEL_ID;
 import static android.provider.Settings.System.DEFAULT_NOTIFICATION_URI;
-import static android.support.v4.view.ViewCompat.LAYOUT_DIRECTION_LTR;
 import static android.widget.Toast.LENGTH_SHORT;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
@@ -278,10 +276,10 @@ public class SettingsFragment extends PreferenceFragmentCompat
 			Locale locale = Localizer.getLocaleFromTag(tag);
 			if (locale == null)
 				throw new IllegalStateException();
-			// Exclude RTL locales on API < 17, they won't be laid out correctly
-			if (SDK_INT < 17 && !isLeftToRight(locale)) {
+			// Check if the locale is supported on this device
+			if (!Localizer.isLocaleSupported(locale)) {
 				if (LOG.isLoggable(INFO))
-					LOG.info("Skipping RTL locale " + tag);
+					LOG.info("Skipping unsupported locale " + tag);
 				continue;
 			}
 			String nativeName = locale.getDisplayName(locale);
@@ -301,13 +299,6 @@ public class SettingsFragment extends PreferenceFragmentCompat
 		language.setEntryValues(entryValues.toArray(new CharSequence[0]));
 	}
 
-	private boolean isLeftToRight(Locale locale) {
-		// TextUtilsCompat returns the wrong direction for Hebrew on some phones
-		String language = locale.getLanguage();
-		if (language.equals("iw") || language.equals("he")) return false;
-		int direction = TextUtilsCompat.getLayoutDirectionFromLocale(locale);
-		return direction == LAYOUT_DIRECTION_LTR;
-	}
 
 	private void setTorNetworkSummary(int torNetworkSetting) {
 		if (torNetworkSetting != PREF_TOR_NETWORK_AUTOMATIC) {
@@ -327,7 +318,8 @@ public class SettingsFragment extends PreferenceFragmentCompat
 		boolean blocked =
 				circumventionProvider.isTorProbablyBlocked(country);
 		boolean useBridges = circumventionProvider.doBridgesWork(country);
-		String setting = getString(R.string.tor_network_setting_without_bridges);
+		String setting =
+				getString(R.string.tor_network_setting_without_bridges);
 		if (blocked && useBridges) {
 			setting = getString(R.string.tor_network_setting_with_bridges);
 		} else if (blocked) {
