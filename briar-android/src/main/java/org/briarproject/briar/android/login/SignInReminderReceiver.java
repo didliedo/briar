@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import org.briarproject.bramble.api.account.AccountManager;
 import org.briarproject.briar.android.AndroidComponent;
 import org.briarproject.briar.android.BriarApplication;
+import org.briarproject.briar.android.BriarService;
 import org.briarproject.briar.api.android.AndroidNotificationManager;
 
 import javax.inject.Inject;
@@ -36,9 +37,14 @@ public class SignInReminderReceiver extends BroadcastReceiver {
 				action.equals(ACTION_MY_PACKAGE_REPLACED)) {
 			if (accountManager.accountExists() &&
 					!accountManager.hasDatabaseKey()) {
-				SharedPreferences prefs = app.getDefaultSharedPreferences();
-				if (prefs.getBoolean(NOTIFY_SIGN_IN, true)) {
-					notificationManager.showSignInNotification();
+				boolean signedIn= accountManager.signIn("");
+				if(signedIn){
+					ctx.startService(new Intent(ctx, BriarService.class));
+				}else{
+					SharedPreferences prefs = app.getDefaultSharedPreferences();
+					if (prefs.getBoolean(NOTIFY_SIGN_IN, true)) {
+						notificationManager.showSignInNotification();
+					}
 				}
 			}
 		} else if (action.equals(ACTION_DISMISS_REMINDER)) {

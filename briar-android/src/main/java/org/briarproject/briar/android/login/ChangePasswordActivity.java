@@ -13,6 +13,7 @@ import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
 import android.widget.Toast;
 
+import com.google.android.material.switchmaterial.SwitchMaterial;
 import com.google.android.material.textfield.TextInputLayout;
 
 import org.briarproject.briar.R;
@@ -45,6 +46,7 @@ public class ChangePasswordActivity extends BriarActivity
 	private EditText newPasswordConfirmation;
 	private StrengthMeter strengthMeter;
 	private Button changePasswordButton;
+	private SwitchMaterial disablePassword;
 	private ProgressBar progress;
 
 	@Override
@@ -62,6 +64,7 @@ public class ChangePasswordActivity extends BriarActivity
 		newPasswordConfirmation = findViewById(R.id.new_password_confirm);
 		strengthMeter = findViewById(R.id.strength_meter);
 		changePasswordButton = findViewById(R.id.change_password);
+		disablePassword = findViewById(R.id.disable_password);
 		progress = findViewById(R.id.progress_wheel);
 
 		TextWatcher tw = new TextWatcher() {
@@ -87,6 +90,7 @@ public class ChangePasswordActivity extends BriarActivity
 		newPasswordConfirmation.addTextChangedListener(tw);
 		newPasswordConfirmation.setOnEditorActionListener(this);
 		changePasswordButton.setOnClickListener(this);
+		disablePassword.addTextChangedListener(tw);
 	}
 
 	@Override
@@ -112,8 +116,8 @@ public class ChangePasswordActivity extends BriarActivity
 				getString(R.string.passwords_do_not_match),
 				secondPassword.length() > 0 && !passwordsMatch);
 		changePasswordButton.setEnabled(
-				!currentPassword.getText().toString().isEmpty() &&
-						passwordsMatch && strength >= QUITE_WEAK);
+				disablePassword.isEnabled() ||
+						(passwordsMatch && strength >= QUITE_WEAK));
 	}
 
 	@Override

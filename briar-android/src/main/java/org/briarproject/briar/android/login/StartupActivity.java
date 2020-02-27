@@ -72,6 +72,7 @@ public class StartupActivity extends BaseActivity implements
 	public void onStart() {
 		super.onStart();
 		viewModel.clearSignInNotification();
+		viewModel.validatePassword("");
 	}
 
 	@Override
