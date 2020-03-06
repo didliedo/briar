@@ -92,8 +92,6 @@ public class ChangePasswordActivityTest {
 		Assert.assertNotEquals(passwordConfirmationWrapper.getError(),
 				changePasswordActivity
 						.getString(R.string.passwords_do_not_match));
-		// Nick has not been set, expect the button to be disabled
-		assertEquals(changePasswordButton.isEnabled(), false);
 	}
 
 	@Test

@@ -116,8 +116,8 @@ public class ChangePasswordActivity extends BriarActivity
 				getString(R.string.passwords_do_not_match),
 				secondPassword.length() > 0 && !passwordsMatch);
 		changePasswordButton.setEnabled(
-				disablePassword.isEnabled() ||
-						(passwordsMatch && strength >= QUITE_WEAK));
+				passwordsMatch &&
+						(disablePassword.isEnabled() || strength >= QUITE_WEAK));
 	}
 
 	@Override
