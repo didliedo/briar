@@ -1,5 +1,6 @@
 package org.briarproject.bramble.api.account;
 
+import org.briarproject.bramble.api.crypto.DecryptionException;
 import org.briarproject.bramble.api.crypto.SecretKey;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
@@ -13,7 +14,8 @@ public interface AccountManager {
 	 * Returns true if the manager has the database key. This will be false
 	 * before {@link #createAccount(String, String)} or {@link #signIn(String)}
 	 * has been called, and true after {@link #createAccount(String, String)}
-	 * or {@link #signIn(String)} has returned true, until the process exits.
+	 * or {@link #signIn(String)} has returned true, until
+	 * {@link #deleteAccount()} is called or the process exits.
 	 */
 	boolean hasDatabaseKey();
 
@@ -22,25 +24,22 @@ public interface AccountManager {
 	 * before {@link #createAccount(String, String)} or {@link #signIn(String)}
 	 * has been called, and non-null after
 	 * {@link #createAccount(String, String)} or {@link #signIn(String)} has
-	 * returned true, until the process exits.
+	 * returned true, until {@link #deleteAccount()} is called or the process
+	 * exits.
 	 */
 	@Nullable
 	SecretKey getDatabaseKey();
 
 	/**
-	 * Returns true if the encrypted database key can be loaded from disk, and
-	 * the database directory exists and is a directory.
+	 * Returns true if the encrypted database key can be loaded from disk.
 	 */
 	boolean accountExists();
 
 	/**
 	 * Creates an identity with the given name and registers it with the
 	 * {@link IdentityManager}. Creates a database key, encrypts it with the
-	 * given password and stores it on disk.
-	 * <p/>
-	 * This method does not create the database directory, so
-	 * {@link #accountExists()} will continue to return false until the
-	 * database directory is created.
+	 * given password and stores it on disk. {@link #accountExists()} will
+	 * return true after this method returns true.
 	 */
 	boolean createAccount(String name, String password);
 
@@ -54,17 +53,19 @@ public interface AccountManager {
 	 * Loads the encrypted database key from disk and decrypts it with the
 	 * given password.
 	 *
-	 * @return true if the database key was successfully loaded and decrypted.
+	 * @throws DecryptionException If the database key could not be loaded and
+	 * decrypted.
 	 */
-	boolean signIn(String password);
+	void signIn(String password) throws DecryptionException;
 
 	/**
 	 * Loads the encrypted database key from disk, decrypts it with the old
 	 * password, encrypts it with the new password, and stores it on disk,
 	 * replacing the old key.
 	 *
-	 * @return true if the database key was successfully loaded, re-encrypted
-	 * and stored.
+	 * @throws DecryptionException If the database key could not be loaded and
+	 * decrypted.
 	 */
-	boolean changePassword(String oldPassword, String newPassword);
+	void changePassword(String oldPassword, String newPassword)
+			throws DecryptionException;
 }
