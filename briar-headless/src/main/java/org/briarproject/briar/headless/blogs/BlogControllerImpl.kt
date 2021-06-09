@@ -49,7 +49,7 @@ constructor(
         val blog = blogManager.getPersonalBlog(author)
         val now = clock.currentTimeMillis()
         val post = blogPostFactory.createBlogPost(blog.id, now, null, author, text)
-        val header = db.transactionWithResult<BlogPostHeader, DbException>(true) { txn ->
+        val header = db.transactionWithResult<BlogPostHeader, DbException>(false) { txn ->
             blogManager.addLocalPost(txn, post)
             return@transactionWithResult blogManager.getPostHeader(txn, blog.id, post.message.id)
         }
