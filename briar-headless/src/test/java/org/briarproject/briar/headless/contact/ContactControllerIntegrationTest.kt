@@ -162,10 +162,4 @@ class ContactControllerIntegrationTest: IntegrationTest() {
         assertEquals(404, response.statusCode)
     }
 
-    @Test
-    fun `posting a blog post`() {
-        val response = post("$url/blogs/posts","{\"text\":\"Hello!\"})
-        assertEquals(200, response.statusCode)
-    }
-
 }
