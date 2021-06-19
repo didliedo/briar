@@ -55,7 +55,7 @@ internal class BlogControllerTest : ControllerTest() {
     fun testCreate() {
         val post = BlogPost(message, null, localAuthor)
         val dbSlot = slot<DbCallable<BlogPostHeader, DbException>>()
-        val txn = Transaction(Object(), true)
+        val txn = Transaction(Object(), false)
 
         every { ctx.body() } returns """{"text": "$text"}"""
         every { identityManager.localAuthor } returns localAuthor
@@ -70,7 +70,7 @@ internal class BlogControllerTest : ControllerTest() {
                 text
             )
         } returns post
-        every { db.transactionWithResult(true, capture(dbSlot)) } answers {
+        every { db.transactionWithResult(false, capture(dbSlot)) } answers {
             dbSlot.captured.call(txn)
         }
         every { blogManager.addLocalPost(txn, post) } just Runs
