@@ -29,7 +29,7 @@ class BlogControllerIntegrationTest: IntegrationTest() {
     }
 
     @Test
-    fun `get blog posts needs authentication toklen`() {
+    fun `get blog posts needs authentication token`() {
         val response = getWithWrongToken("$url/blogs/posts")
         assertEquals(401, response.statusCode)
     }

@@ -37,7 +37,7 @@ internal class BlogControllerTest : ControllerTest() {
     private val blog = Blog(group, author, false)
     private val parentId: MessageId? = null
     private val rssFeed = false
-    private val read = true
+    private val read = false
     private val header = BlogPostHeader(
         POST,
         group.id,
