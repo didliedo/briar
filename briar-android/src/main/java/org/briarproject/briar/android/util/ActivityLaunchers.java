@@ -16,6 +16,7 @@ import static android.app.Activity.RESULT_CANCELED;
 import static android.bluetooth.BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE;
 import static android.bluetooth.BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION;
 import static android.content.Intent.EXTRA_MIME_TYPES;
+import static android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION;
 import static android.os.Build.VERSION.SDK_INT;
 import static org.briarproject.bramble.util.AndroidUtils.getSupportedImageContentTypes;
 
@@ -46,6 +47,7 @@ public class ActivityLaunchers {
 			Intent i = super.createIntent(context, input);
 			putShowAdvancedExtra(i);
 			i.setType("image/*");
+			i.addFlags(FLAG_GRANT_READ_URI_PERMISSION);
 			if (SDK_INT >= 19)
 				i.putExtra(EXTRA_MIME_TYPES, getSupportedImageContentTypes());
 			return i;
