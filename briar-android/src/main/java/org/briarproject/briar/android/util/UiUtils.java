@@ -146,6 +146,10 @@ public class UiUtils {
 
 	public static void showFragment(FragmentManager fm, Fragment f,
 			@Nullable String tag, boolean addToBackStack) {
+		// don't re-add same fragment again
+		Fragment fragment = fm.findFragmentByTag(tag);
+		if (fragment != null && fragment.isAdded()) return;
+
 		FragmentTransaction ta = fm.beginTransaction()
 				.setCustomAnimations(R.anim.step_next_in,
 						R.anim.step_previous_out, R.anim.step_previous_in,
