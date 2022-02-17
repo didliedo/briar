@@ -9,6 +9,7 @@ import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.identity.Author;
+import org.briarproject.bramble.api.mailbox.MailboxPropertiesUpdate;
 import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
@@ -19,6 +20,8 @@ import org.briarproject.bramble.api.sync.MessageId;
 import java.security.GeneralSecurityException;
 import java.util.Collection;
 import java.util.Map;
+
+import javax.annotation.Nullable;
 
 @NotNullByDefault
 public interface ClientHelper {
@@ -121,6 +124,10 @@ public interface ClientHelper {
 			BdfDictionary properties) throws FormatException;
 
 	Map<TransportId, TransportProperties> parseAndValidateTransportPropertiesMap(
+			BdfDictionary properties) throws FormatException;
+
+	@Nullable
+	MailboxPropertiesUpdate parseAndValidateMailboxProperties(
 			BdfDictionary properties) throws FormatException;
 
 	/**

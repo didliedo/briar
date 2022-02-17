@@ -22,6 +22,9 @@ import org.briarproject.bramble.api.db.Metadata;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.identity.Author;
 import org.briarproject.bramble.api.identity.AuthorFactory;
+import org.briarproject.bramble.api.mailbox.MailboxAuthToken;
+import org.briarproject.bramble.api.mailbox.MailboxFolderId;
+import org.briarproject.bramble.api.mailbox.MailboxPropertiesUpdate;
 import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
@@ -29,6 +32,7 @@ import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageFactory;
 import org.briarproject.bramble.api.sync.MessageId;
+import org.briarproject.bramble.util.Base32;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -39,6 +43,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 
@@ -46,6 +51,13 @@ import static org.briarproject.bramble.api.client.ContactGroupConstants.GROUP_KE
 import static org.briarproject.bramble.api.identity.Author.FORMAT_VERSION;
 import static org.briarproject.bramble.api.identity.AuthorConstants.MAX_AUTHOR_NAME_LENGTH;
 import static org.briarproject.bramble.api.identity.AuthorConstants.MAX_PUBLIC_KEY_LENGTH;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_BYTES_LENGTH;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_COUNT;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_AUTHTOKEN;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_INBOXID;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_ONIONADDRESS;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_OUTBOXID;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_ONIONADDRESS_LENGTH;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MAX_PROPERTIES_PER_TRANSPORT;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MAX_PROPERTY_LENGTH;
 import static org.briarproject.bramble.util.ValidationUtils.checkLength;
@@ -397,6 +409,34 @@ class ClientHelperImpl implements ClientHelper {
 			tpMap.put(transportId, transportProperties);
 		}
 		return tpMap;
+	}
+
+	@Override
+	@Nullable
+	public MailboxPropertiesUpdate parseAndValidateMailboxProperties(
+			BdfDictionary properties) throws FormatException {
+		if (properties.isEmpty()) {
+			return null;
+		}
+		if (properties.size() != PROP_COUNT) {
+			throw new FormatException();
+		}
+		String onionAddress = properties.getString(PROP_KEY_ONIONADDRESS);
+		checkLength(onionAddress, PROP_ONIONADDRESS_LENGTH);
+		try {
+			Base32.decode(onionAddress, true);
+		} catch (IllegalArgumentException e) {
+			throw new FormatException();
+		}
+		byte[] authToken = properties.getRaw(PROP_KEY_AUTHTOKEN);
+		checkLength(authToken, PROP_BYTES_LENGTH);
+		byte[] inboxId = properties.getRaw(PROP_KEY_INBOXID);
+		checkLength(inboxId, PROP_BYTES_LENGTH);
+		byte[] outboxId = properties.getRaw(PROP_KEY_OUTBOXID);
+		checkLength(outboxId, PROP_BYTES_LENGTH);
+		return new MailboxPropertiesUpdate(onionAddress,
+				new MailboxAuthToken(authToken), new MailboxFolderId(inboxId),
+				new MailboxFolderId(outboxId));
 	}
 
 	@Override
