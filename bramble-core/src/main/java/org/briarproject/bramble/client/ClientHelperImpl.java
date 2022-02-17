@@ -22,6 +22,9 @@ import org.briarproject.bramble.api.db.Metadata;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.identity.Author;
 import org.briarproject.bramble.api.identity.AuthorFactory;
+import org.briarproject.bramble.api.mailbox.MailboxAuthToken;
+import org.briarproject.bramble.api.mailbox.MailboxFolderId;
+import org.briarproject.bramble.api.mailbox.MailboxProperties;
 import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
@@ -46,6 +49,12 @@ import static org.briarproject.bramble.api.client.ContactGroupConstants.GROUP_KE
 import static org.briarproject.bramble.api.identity.Author.FORMAT_VERSION;
 import static org.briarproject.bramble.api.identity.AuthorConstants.MAX_AUTHOR_NAME_LENGTH;
 import static org.briarproject.bramble.api.identity.AuthorConstants.MAX_PUBLIC_KEY_LENGTH;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.NONEMPTY_PROPERTIES_COUNT;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_AUTHTOKEN;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_INBOXID;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_ONIONPUBKEY;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_OUTBOXID;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_VAL_LENGTH;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MAX_PROPERTIES_PER_TRANSPORT;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MAX_PROPERTY_LENGTH;
 import static org.briarproject.bramble.util.ValidationUtils.checkLength;
@@ -397,6 +406,29 @@ class ClientHelperImpl implements ClientHelper {
 			tpMap.put(transportId, transportProperties);
 		}
 		return tpMap;
+	}
+
+	@Override
+	public MailboxProperties parseAndValidateMailboxProperties(
+			BdfDictionary properties) throws FormatException {
+		if (properties.isEmpty()) {
+			// TODO this is what we use for empty props (no mailbox) for now
+			return new MailboxProperties();
+		}
+		if (properties.size() != NONEMPTY_PROPERTIES_COUNT) {
+			throw new FormatException();
+		}
+		byte[] pubKey = properties.getRaw(PROP_KEY_ONIONPUBKEY);
+		checkLength(pubKey, PROP_VAL_LENGTH);
+		byte[] token = properties.getRaw(PROP_KEY_AUTHTOKEN);
+		checkLength(token, PROP_VAL_LENGTH);
+		byte[] inboxId = properties.getRaw(PROP_KEY_INBOXID);
+		checkLength(inboxId, PROP_VAL_LENGTH);
+		byte[] outboxId = properties.getRaw(PROP_KEY_OUTBOXID);
+		checkLength(outboxId, PROP_VAL_LENGTH);
+		return new MailboxProperties(crypto.encodeOnionAddress(pubKey),
+				new MailboxAuthToken(token), new MailboxFolderId(inboxId),
+				new MailboxFolderId(outboxId), false);
 	}
 
 	@Override
