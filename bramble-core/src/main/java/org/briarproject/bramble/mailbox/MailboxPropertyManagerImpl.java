@@ -96,7 +96,7 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 		MailboxProperties ownProps =
 				mailboxSettingsManager.getOwnMailboxProperties(txn);
 		if (ownProps != null) {
-			sendMessage(txn, g.getId(), 1,
+			storeMessage(txn, g.getId(), 1,
 					createProperties(ownProps.getOnionAddress()));
 		}
 	}
@@ -121,39 +121,36 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 
 	@Override
 	public void createAndSendProperties(ContactId c) throws DbException {
-		try {
-			db.transaction(false, txn -> {
-				MailboxProperties ownProps =
-						mailboxSettingsManager.getOwnMailboxProperties(txn);
-				if (ownProps == null) {
-					// TODO? we're not supposed to be called if we're not paired,
-					//  IllegalStateException?
-					return;
-				}
-				// TODO When a mailbox is unpaired, sendEmptyProperties() is
-				//  expected to be called by mailboxmanager. So at this point, there
-				//  should either not be any local update message in our
-				//  contactgroup (because we were never paired), or the latest
-				//  message should be the Empty update message. Right? Should/could
-				//  we assert this?
+		db.transaction(false, txn -> {
+			MailboxProperties ownProps =
+					mailboxSettingsManager.getOwnMailboxProperties(txn);
+			if (ownProps == null) {
+				// TODO? we're not supposed to be called if we're not paired,
+				//  IllegalStateException?
+				return;
+			}
+			// TODO When a mailbox is unpaired, sendEmptyProperties() is
+			//  expected to be called by mailboxmanager. So at this point, there
+			//  should either not be any local update message in our
+			//  contactgroup (because we were never paired), or the latest
+			//  message should be the Empty update message. Right? Should/could
+			//  we assert this?
+			//  The opposite in sendEmptyProperties() itself below, right.
 
-				Group g = getContactGroup(db.getContact(txn, c));
-				LatestUpdate latest = findLatest(txn, g.getId(), true);
-				sendMessage(txn, g.getId(),
-						latest == null ? 1 : latest.version + 1,
-						createProperties(ownProps.getOnionAddress()));
-				if (latest != null) {
-					db.removeMessage(txn, latest.messageId);
-				}
-			});
-		} catch (FormatException e) {
-			throw new DbException(e);
-		}
+			Group g = getContactGroup(db.getContact(txn, c));
+			storeMessageReplaceLatest(txn, g.getId(),
+					createProperties(ownProps.getOnionAddress()));
+		});
 	}
 
 	@Override
-	public void sendEmptyProperties(ContactId c) {
-		// TODO
+	public void sendEmptyProperties(ContactId c) throws DbException {
+		// TODO? we're not supposed to be called if we *are* paired, right?
+		//  IllegalStateException?
+		db.transaction(false, txn -> {
+			Group g = getContactGroup(db.getContact(txn, c));
+			storeMessageReplaceLatest(txn, g.getId(), null);
+		});
 	}
 
 	private MailboxPropertiesUpdate createProperties(String ownOnionAddress) {
@@ -163,7 +160,20 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 				new MailboxFolderId(getRandomId()));
 	}
 
-	private void sendMessage(Transaction txn, GroupId g, long version,
+	private void storeMessageReplaceLatest(Transaction txn, GroupId g,
+			@Nullable MailboxPropertiesUpdate p) throws DbException {
+		try {
+			LatestUpdate latest = findLatest(txn, g, true);
+			storeMessage(txn, g, latest == null ? 1 : latest.version + 1, p);
+			if (latest != null) {
+				db.removeMessage(txn, latest.messageId);
+			}
+		} catch (FormatException e) {
+			throw new DbException(e);
+		}
+	}
+
+	private void storeMessage(Transaction txn, GroupId g, long version,
 			@Nullable MailboxPropertiesUpdate p) throws DbException {
 		try {
 			Message m = clientHelper.createMessage(g, clock.currentTimeMillis(),
