@@ -18,6 +18,7 @@ import org.briarproject.bramble.api.lifecycle.LifecycleManager.OpenDatabaseHook;
 import org.briarproject.bramble.api.mailbox.MailboxAuthToken;
 import org.briarproject.bramble.api.mailbox.MailboxFolderId;
 import org.briarproject.bramble.api.mailbox.MailboxProperties;
+import org.briarproject.bramble.api.mailbox.MailboxPropertiesUpdate;
 import org.briarproject.bramble.api.mailbox.MailboxPropertyManager;
 import org.briarproject.bramble.api.mailbox.MailboxSettingsManager;
 import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
@@ -149,15 +150,15 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 		// TODO
 	}
 
-	private MailboxProperties createProperties(String ownOnionAddress) {
-		return new MailboxProperties(ownOnionAddress,
+	private MailboxPropertiesUpdate createProperties(String ownOnionAddress) {
+		return new MailboxPropertiesUpdate(ownOnionAddress,
 				new MailboxAuthToken(getRandomId()),
 				new MailboxFolderId(getRandomId()),
 				new MailboxFolderId(getRandomId()));
 	}
 
 	private void sendMessage(Transaction txn, GroupId g, long version,
-			MailboxProperties p) throws DbException {
+			@Nullable MailboxPropertiesUpdate p) throws DbException {
 		try {
 			Message m = clientHelper.createMessage(g, clock.currentTimeMillis(),
 					encodeProperties(version, p));
@@ -185,9 +186,10 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 		return null;
 	}
 
-	private BdfList encodeProperties(long version, MailboxProperties p) {
+	private BdfList encodeProperties(long version,
+			@Nullable MailboxPropertiesUpdate p) {
 		BdfDictionary dict = new BdfDictionary();
-		if (!p.isEmpty()) {
+		if (p != null) {
 			// TODO need to get this from p.getOnionAddress()...
 			byte[] dummyOnionPubKey = {
 					1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
@@ -204,7 +206,7 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 
 	@Override
 	@Nullable
-	public MailboxProperties getRemoteProperties(ContactId c) {
+	public MailboxPropertiesUpdate getRemoteProperties(ContactId c) {
 		return null;
 	}
 

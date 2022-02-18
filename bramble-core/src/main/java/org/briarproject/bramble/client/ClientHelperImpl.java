@@ -24,7 +24,7 @@ import org.briarproject.bramble.api.identity.Author;
 import org.briarproject.bramble.api.identity.AuthorFactory;
 import org.briarproject.bramble.api.mailbox.MailboxAuthToken;
 import org.briarproject.bramble.api.mailbox.MailboxFolderId;
-import org.briarproject.bramble.api.mailbox.MailboxProperties;
+import org.briarproject.bramble.api.mailbox.MailboxPropertiesUpdate;
 import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
@@ -42,6 +42,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 
@@ -409,11 +410,11 @@ class ClientHelperImpl implements ClientHelper {
 	}
 
 	@Override
-	public MailboxProperties parseAndValidateMailboxProperties(
+	@Nullable
+	public MailboxPropertiesUpdate parseAndValidateMailboxProperties(
 			BdfDictionary properties) throws FormatException {
 		if (properties.isEmpty()) {
-			// TODO this is what we use for empty props (no mailbox) for now
-			return new MailboxProperties();
+			return null;
 		}
 		if (properties.size() != NONEMPTY_PROPERTIES_COUNT) {
 			throw new FormatException();
@@ -426,9 +427,9 @@ class ClientHelperImpl implements ClientHelper {
 		checkLength(inboxId, PROP_VAL_LENGTH);
 		byte[] outboxId = properties.getRaw(PROP_KEY_OUTBOXID);
 		checkLength(outboxId, PROP_VAL_LENGTH);
-		return new MailboxProperties(crypto.encodeOnionAddress(pubKey),
+		return new MailboxPropertiesUpdate(crypto.encodeOnionAddress(pubKey),
 				new MailboxAuthToken(token), new MailboxFolderId(inboxId),
-				new MailboxFolderId(outboxId), false);
+				new MailboxFolderId(outboxId));
 	}
 
 	@Override

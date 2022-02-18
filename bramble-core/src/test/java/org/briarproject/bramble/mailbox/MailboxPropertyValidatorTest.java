@@ -8,7 +8,7 @@ import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.data.MetadataEncoder;
 import org.briarproject.bramble.api.mailbox.MailboxAuthToken;
 import org.briarproject.bramble.api.mailbox.MailboxFolderId;
-import org.briarproject.bramble.api.mailbox.MailboxProperties;
+import org.briarproject.bramble.api.mailbox.MailboxPropertiesUpdate;
 import org.briarproject.bramble.api.mailbox.MailboxPropertyManager;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Message;
@@ -29,7 +29,7 @@ public class MailboxPropertyValidatorTest extends BrambleMockTestCase {
 	private final ClientHelper clientHelper = context.mock(ClientHelper.class);
 
 	private final BdfDictionary bdfDict;
-	private final MailboxProperties mailboxProps;
+	private final MailboxPropertiesUpdate mailboxProps;
 	private final Group group;
 	private final Message message;
 	private final MailboxPropertyValidator mpv;
@@ -38,11 +38,10 @@ public class MailboxPropertyValidatorTest extends BrambleMockTestCase {
 		// Just a dummies, clientHelper is mocked so we're not testing
 		//  parseAndValidateMailboxProperties()
 		bdfDict = BdfDictionary.of(new BdfEntry("foo", "bar"));
-		mailboxProps = new MailboxProperties("baz",
+		mailboxProps = new MailboxPropertiesUpdate("baz",
 				new MailboxAuthToken(getRandomId()),
 				new MailboxFolderId(getRandomId()),
-				new MailboxFolderId(getRandomId()),
-				false);
+				new MailboxFolderId(getRandomId()));
 
 		group = getGroup(MailboxPropertyManager.CLIENT_ID,
 				MailboxPropertyManager.MAJOR_VERSION);

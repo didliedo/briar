@@ -6,17 +6,20 @@ import javax.annotation.concurrent.Immutable;
 
 @Immutable
 @NotNullByDefault
-public class MailboxProperties {
+public class MailboxPropertiesUpdate {
 
 	private final String onionAddress;
 	private final MailboxAuthToken authToken;
-	private final boolean owner;
+	private final MailboxFolderId inboxId;
+	private final MailboxFolderId outboxId;
 
-	public MailboxProperties(String onionAddress, MailboxAuthToken authToken,
-			boolean owner) {
+	public MailboxPropertiesUpdate(String onionAddress,
+			MailboxAuthToken authToken,
+			MailboxFolderId inboxId, MailboxFolderId outboxId) {
 		this.onionAddress = onionAddress;
 		this.authToken = authToken;
-		this.owner = owner;
+		this.inboxId = inboxId;
+		this.outboxId = outboxId;
 	}
 
 	public String getOnionAddress() {
@@ -27,7 +30,12 @@ public class MailboxProperties {
 		return authToken;
 	}
 
-	public boolean isOwner() {
-		return owner;
+	public MailboxFolderId getInboxId() {
+		return inboxId;
 	}
+
+	public MailboxFolderId getOutboxId() {
+		return outboxId;
+	}
+
 }

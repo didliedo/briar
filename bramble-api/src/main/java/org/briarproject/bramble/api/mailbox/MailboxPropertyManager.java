@@ -61,5 +61,5 @@ public interface MailboxPropertyManager {
 	void sendEmptyProperties(ContactId c);
 
 	@Nullable
-	MailboxProperties getRemoteProperties(ContactId c);
+	MailboxPropertiesUpdate getRemoteProperties(ContactId c);
 }
