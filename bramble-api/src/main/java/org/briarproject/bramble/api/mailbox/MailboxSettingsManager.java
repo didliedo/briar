@@ -19,6 +19,9 @@ public interface MailboxSettingsManager {
 
 	MailboxStatus getOwnMailboxStatus(Transaction txn) throws DbException;
 
+	void setOwnMailboxStatus(Transaction txn, long lastAttempt,
+			long lastSuccess, int attempts) throws DbException;
+
 	void recordSuccessfulConnection(Transaction txn, long now)
 			throws DbException;
 

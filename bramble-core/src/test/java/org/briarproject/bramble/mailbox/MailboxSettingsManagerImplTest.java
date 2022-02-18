@@ -131,6 +131,21 @@ public class MailboxSettingsManagerImplTest extends BrambleMockTestCase {
 	}
 
 	@Test
+	public void testSetStatus() throws Exception {
+		Transaction txn = new Transaction(null, true);
+		Settings settings = new Settings();
+		settings.putLong(SETTINGS_KEY_LAST_ATTEMPT, lastAttempt);
+		settings.putLong(SETTINGS_KEY_LAST_SUCCESS, lastSuccess);
+		settings.putInt(SETTINGS_KEY_ATTEMPTS, attempts);
+
+		context.checking(new Expectations() {{
+			oneOf(settingsManager)
+					.mergeSettings(txn, settings, SETTINGS_NAMESPACE);
+		}});
+		manager.setOwnMailboxStatus(txn, lastAttempt, lastSuccess, attempts);
+	}
+
+	@Test
 	public void testRecordsSuccess() throws Exception {
 		Transaction txn = new Transaction(null, false);
 		Settings expectedSettings = new Settings();

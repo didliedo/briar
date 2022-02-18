@@ -73,6 +73,16 @@ class MailboxSettingsManagerImpl implements MailboxSettingsManager {
 	}
 
 	@Override
+	public void setOwnMailboxStatus(Transaction txn, long lastAttempt,
+			long lastSuccess, int attempts) throws DbException {
+		Settings s = new Settings();
+		s.putLong(SETTINGS_KEY_LAST_ATTEMPT, lastAttempt);
+		s.putLong(SETTINGS_KEY_LAST_SUCCESS, lastSuccess);
+		s.putInt(SETTINGS_KEY_ATTEMPTS, attempts);
+		settingsManager.mergeSettings(txn, s, SETTINGS_NAMESPACE);
+	}
+
+	@Override
 	public void recordSuccessfulConnection(Transaction txn, long now)
 			throws DbException {
 		Settings s = new Settings();
