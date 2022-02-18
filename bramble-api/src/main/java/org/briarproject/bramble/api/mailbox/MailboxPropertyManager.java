@@ -35,7 +35,7 @@ public interface MailboxPropertyManager {
 	 * The required properties of a non-empty update message.
 	 */
 	String PROP_KEY_ONIONADDRESS = "onionAddress";
-	String PROP_KEY_AUTHTOKEN = "token";
+	String PROP_KEY_AUTHTOKEN = "authToken";
 	String PROP_KEY_INBOXID = "inboxId";
 	String PROP_KEY_OUTBOXID = "outboxId";
 

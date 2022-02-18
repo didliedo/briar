@@ -420,14 +420,14 @@ class ClientHelperImpl implements ClientHelper {
 			throw new FormatException();
 		}
 		String onionAddress = properties.getString(PROP_KEY_ONIONADDRESS);
-		byte[] token = properties.getRaw(PROP_KEY_AUTHTOKEN);
-		checkLength(token, PROP_BYTES_LENGTH);
+		byte[] authToken = properties.getRaw(PROP_KEY_AUTHTOKEN);
+		checkLength(authToken, PROP_BYTES_LENGTH);
 		byte[] inboxId = properties.getRaw(PROP_KEY_INBOXID);
 		checkLength(inboxId, PROP_BYTES_LENGTH);
 		byte[] outboxId = properties.getRaw(PROP_KEY_OUTBOXID);
 		checkLength(outboxId, PROP_BYTES_LENGTH);
 		return new MailboxPropertiesUpdate(onionAddress,
-				new MailboxAuthToken(token), new MailboxFolderId(inboxId),
+				new MailboxAuthToken(authToken), new MailboxFolderId(inboxId),
 				new MailboxFolderId(outboxId));
 	}
 
