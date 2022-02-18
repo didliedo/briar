@@ -121,28 +121,34 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 
 	@Override
 	public void createAndSendProperties(ContactId c) throws DbException {
-		db.transaction(false, txn -> {
-//	 TODO		LatestUpdate latest = findLatest(txn, )
-			MailboxProperties ownProps =
-					mailboxSettingsManager.getOwnMailboxProperties(txn);
-			if (ownProps == null) {
-				// TODO? we're not supposed to be called if we're not paired,
-				//  IllegalStateException?
-				return;
-			}
-			// TODO When a mailbox is unpaired, sendEmptyProperties() is
-			//  expected to be called by mailboxmanager. So at this point, there
-			//  should either not be any local update message in our
-			//  contactgroup (because we were never paired), or the latest
-			//  message should be the Empty update message. Right? Should/could
-			//  we assert this?
+		try {
+			db.transaction(false, txn -> {
+				MailboxProperties ownProps =
+						mailboxSettingsManager.getOwnMailboxProperties(txn);
+				if (ownProps == null) {
+					// TODO? we're not supposed to be called if we're not paired,
+					//  IllegalStateException?
+					return;
+				}
+				// TODO When a mailbox is unpaired, sendEmptyProperties() is
+				//  expected to be called by mailboxmanager. So at this point, there
+				//  should either not be any local update message in our
+				//  contactgroup (because we were never paired), or the latest
+				//  message should be the Empty update message. Right? Should/could
+				//  we assert this?
 
-			long version = 0; // TODO
-
-			Group g = getContactGroup(db.getContact(txn, c));
-			sendMessage(txn, g.getId(), version,
-					createProperties(ownProps.getOnionAddress()));
-		});
+				Group g = getContactGroup(db.getContact(txn, c));
+				LatestUpdate latest = findLatest(txn, g.getId(), true);
+				sendMessage(txn, g.getId(),
+						latest == null ? 1 : latest.version + 1,
+						createProperties(ownProps.getOnionAddress()));
+				if (latest != null) {
+					db.removeMessage(txn, latest.messageId);
+				}
+			});
+		} catch (FormatException e) {
+			throw new DbException(e);
+		}
 	}
 
 	@Override
