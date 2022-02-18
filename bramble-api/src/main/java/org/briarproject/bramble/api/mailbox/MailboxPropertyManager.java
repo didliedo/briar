@@ -27,22 +27,22 @@ public interface MailboxPropertyManager {
 	int MINOR_VERSION = 0;
 
 	/**
-	 * The number of properties required for a non-empty update message.
+	 * The number of properties required for a (non-empty) update message.
 	 */
-	int NONEMPTY_PROPERTIES_COUNT = 4;
+	int PROP_COUNT = 4;
 
 	/**
 	 * The required properties of a non-empty update message.
 	 */
-	String PROP_KEY_ONIONPUBKEY = "onionPubKey";
+	String PROP_KEY_ONIONADDRESS = "onionAddress";
 	String PROP_KEY_AUTHTOKEN = "token";
 	String PROP_KEY_INBOXID = "inboxId";
 	String PROP_KEY_OUTBOXID = "outboxId";
 
 	/**
-	 * The byte length of all properties' values.
+	 * The length of all byte[] properties' values.
 	 */
-	int PROP_VAL_LENGTH = 32;
+	int PROP_BYTES_LENGTH = 32;
 
 	/**
 	 * Message metadata key for the version number of a local or remote update,

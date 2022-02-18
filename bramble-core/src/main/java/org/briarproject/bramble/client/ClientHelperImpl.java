@@ -50,12 +50,12 @@ import static org.briarproject.bramble.api.client.ContactGroupConstants.GROUP_KE
 import static org.briarproject.bramble.api.identity.Author.FORMAT_VERSION;
 import static org.briarproject.bramble.api.identity.AuthorConstants.MAX_AUTHOR_NAME_LENGTH;
 import static org.briarproject.bramble.api.identity.AuthorConstants.MAX_PUBLIC_KEY_LENGTH;
-import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.NONEMPTY_PROPERTIES_COUNT;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_BYTES_LENGTH;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_COUNT;
 import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_AUTHTOKEN;
 import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_INBOXID;
-import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_ONIONPUBKEY;
+import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_ONIONADDRESS;
 import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_KEY_OUTBOXID;
-import static org.briarproject.bramble.api.mailbox.MailboxPropertyManager.PROP_VAL_LENGTH;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MAX_PROPERTIES_PER_TRANSPORT;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MAX_PROPERTY_LENGTH;
 import static org.briarproject.bramble.util.ValidationUtils.checkLength;
@@ -416,18 +416,17 @@ class ClientHelperImpl implements ClientHelper {
 		if (properties.isEmpty()) {
 			return null;
 		}
-		if (properties.size() != NONEMPTY_PROPERTIES_COUNT) {
+		if (properties.size() != PROP_COUNT) {
 			throw new FormatException();
 		}
-		byte[] pubKey = properties.getRaw(PROP_KEY_ONIONPUBKEY);
-		checkLength(pubKey, PROP_VAL_LENGTH);
+		String onionAddress = properties.getString(PROP_KEY_ONIONADDRESS);
 		byte[] token = properties.getRaw(PROP_KEY_AUTHTOKEN);
-		checkLength(token, PROP_VAL_LENGTH);
+		checkLength(token, PROP_BYTES_LENGTH);
 		byte[] inboxId = properties.getRaw(PROP_KEY_INBOXID);
-		checkLength(inboxId, PROP_VAL_LENGTH);
+		checkLength(inboxId, PROP_BYTES_LENGTH);
 		byte[] outboxId = properties.getRaw(PROP_KEY_OUTBOXID);
-		checkLength(outboxId, PROP_VAL_LENGTH);
-		return new MailboxPropertiesUpdate(crypto.encodeOnionAddress(pubKey),
+		checkLength(outboxId, PROP_BYTES_LENGTH);
+		return new MailboxPropertiesUpdate(onionAddress,
 				new MailboxAuthToken(token), new MailboxFolderId(inboxId),
 				new MailboxFolderId(outboxId));
 	}

@@ -196,13 +196,7 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 			@Nullable MailboxPropertiesUpdate p) {
 		BdfDictionary dict = new BdfDictionary();
 		if (p != null) {
-			// TODO need to get this from p.getOnionAddress()...
-			byte[] dummyOnionPubKey = {
-					1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-					17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-					32
-			};
-			dict.put(PROP_KEY_ONIONPUBKEY, dummyOnionPubKey);
+			dict.put(PROP_KEY_ONIONADDRESS, p.getOnionAddress());
 			dict.put(PROP_KEY_AUTHTOKEN, p.getAuthToken().getBytes());
 			dict.put(PROP_KEY_INBOXID, p.getInboxId().getBytes());
 			dict.put(PROP_KEY_OUTBOXID, p.getOutboxId().getBytes());
@@ -222,7 +216,7 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 	}
 
 	private byte[] getRandomId() {
-		byte[] b = new byte[PROP_VAL_LENGTH];
+		byte[] b = new byte[PROP_BYTES_LENGTH];
 		secureRandom.nextBytes(b);
 		return b;
 	}

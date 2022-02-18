@@ -35,7 +35,7 @@ public class MailboxPropertyValidatorTest extends BrambleMockTestCase {
 	private final MailboxPropertyValidator mpv;
 
 	public MailboxPropertyValidatorTest() {
-		// Just a dummies, clientHelper is mocked so we're not testing
+		// Just dummies, clientHelper is mocked so we're not testing
 		//  parseAndValidateMailboxProperties()
 		bdfDict = BdfDictionary.of(new BdfEntry("foo", "bar"));
 		mailboxProps = new MailboxPropertiesUpdate("baz",
