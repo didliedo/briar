@@ -77,5 +77,5 @@ public interface MailboxPropertyManager {
 	void sendEmptyProperties(ContactId c) throws DbException;
 
 	@Nullable
-	MailboxPropertiesUpdate getRemoteProperties(ContactId c);
+	MailboxPropertiesUpdate getRemoteProperties(ContactId c) throws DbException;
 }
