@@ -169,6 +169,32 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 		});
 	}
 
+	@Override
+	@Nullable
+	public MailboxPropertiesUpdate getRemoteProperties(ContactId c)
+			throws DbException {
+		return db.transactionWithNullableResult(true, txn ->
+				getRemoteProperties(txn, db.getContact(txn, c)));
+	}
+
+	@Nullable
+	private MailboxPropertiesUpdate getRemoteProperties(Transaction txn,
+			Contact c) throws DbException {
+		MailboxPropertiesUpdate p = null;
+		Group g = getContactGroup(c);
+		try {
+			LatestUpdate latest = findLatest(txn, g.getId(), false);
+			if (latest != null) {
+				BdfList body =
+						clientHelper.getMessageAsList(txn, latest.messageId);
+				p = parseProperties(body);
+			}
+		} catch (FormatException e) {
+			throw new DbException(e);
+		}
+		return p;
+	}
+
 	private void storeMessageReplaceLatest(Transaction txn, GroupId g,
 			@Nullable MailboxPropertiesUpdate p) throws DbException {
 		try {
@@ -223,10 +249,11 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 		return BdfList.of(version, dict);
 	}
 
-	@Override
 	@Nullable
-	public MailboxPropertiesUpdate getRemoteProperties(ContactId c) {
-		return null;
+	private MailboxPropertiesUpdate parseProperties(BdfList body)
+			throws FormatException {
+		BdfDictionary dict = body.getDictionary(1);
+		return clientHelper.parseAndValidateMailboxProperties(dict);
 	}
 
 	private Group getContactGroup(Contact c) {
