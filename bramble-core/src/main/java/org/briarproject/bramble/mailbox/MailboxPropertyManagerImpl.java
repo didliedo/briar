@@ -38,6 +38,8 @@ import java.util.Map;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_DO_NOT_SHARE;
+
 @NotNullByDefault
 class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 		OpenDatabaseHook, ContactHook, ClientVersioningHook,
@@ -116,8 +118,23 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 	@Override
 	public DeliveryAction incomingMessage(Transaction txn, Message m,
 			Metadata meta) throws DbException, InvalidMessageException {
-		// TODO
-		return null;
+		try {
+			BdfDictionary d = metadataParser.parse(meta);
+			// Get latest update in the same group (from same contact)
+			LatestUpdate latest = findLatest(txn, m.getGroupId(), false);
+			if (latest != null) {
+				if (d.getLong(MSG_KEY_VERSION) > latest.version) {
+					db.deleteMessage(txn, latest.messageId);
+					db.deleteMessageMetadata(txn, latest.messageId);
+				} else {
+					db.deleteMessage(txn, m.getId());
+					db.deleteMessageMetadata(txn, m.getId());
+				}
+			}
+		} catch (FormatException e) {
+			throw new InvalidMessageException(e);
+		}
+		return ACCEPT_DO_NOT_SHARE;
 	}
 
 	@Override
