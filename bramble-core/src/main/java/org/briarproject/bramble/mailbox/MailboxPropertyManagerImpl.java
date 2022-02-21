@@ -100,6 +100,10 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 		//  to the mailbox. Because it needs to both get the props generated and
 		//  sent off, as well as getting hold of them for adding the contact to
 		//  the mailbox.
+		//  Maybe the hook shouldn't even be implemented here, but only by the
+		//  pairing/syncing code, reacting to the adding of new contacts and
+		//  setting them up. But it feels like adding the contactgroup (and
+		//  setting initial visibility) should be done in here, hm...
 	}
 
 	@Override
@@ -138,26 +142,24 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 	}
 
 	@Override
-	public MailboxPropertiesUpdate createAndSendProperties(ContactId c,
-			String ownOnion) throws DbException {
-		return db.transactionWithResult(false, txn -> {
-			// TODO When a mailbox is unpaired, mailboxmanager (or so) should
-			//  call sendEmptyProperties(c) for each contact that was added to
-			//  the mailbox (for which createAndSendProperties(c) was called).
-			//  So at this point, there should either not be any local update
-			//  message in our contactgroup (because we were never paired), or
-			//  the latest message should be the Empty update message. Right?
-			//  Should/could we assert this?
-			//  The other way around in sendEmptyProperties() itself, right.
+	public MailboxPropertiesUpdate createAndSendProperties(Transaction txn,
+			ContactId c, String ownOnion) throws DbException {
+		// TODO When a mailbox is unpaired, mailboxmanager (or so) should
+		//  call sendEmptyProperties(c) for each contact that was added to
+		//  the mailbox (for which createAndSendProperties(c) was called).
+		//  So at this point, there should either not be any local update
+		//  message in our contactgroup (because we were never paired), or
+		//  the latest message should be the Empty update message. Right?
+		//  Should/could we assert this?
+		//  The other way around in sendEmptyProperties() itself, right.
 
-			MailboxPropertiesUpdate p = new MailboxPropertiesUpdate(ownOnion,
-					new MailboxAuthToken(getRandomId()),
-					new MailboxFolderId(getRandomId()),
-					new MailboxFolderId(getRandomId()));
-			Group g = getContactGroup(db.getContact(txn, c));
-			storeMessageReplaceLatest(txn, g.getId(), p);
-			return p;
-		});
+		MailboxPropertiesUpdate p = new MailboxPropertiesUpdate(ownOnion,
+				new MailboxAuthToken(getRandomId()),
+				new MailboxFolderId(getRandomId()),
+				new MailboxFolderId(getRandomId()));
+		Group g = getContactGroup(db.getContact(txn, c));
+		storeMessageReplaceLatest(txn, g.getId(), p);
+		return p;
 	}
 
 	@Override

@@ -2,6 +2,7 @@ package org.briarproject.bramble.api.mailbox;
 
 import org.briarproject.bramble.api.contact.ContactId;
 import org.briarproject.bramble.api.db.DbException;
+import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.ClientId;
 
@@ -71,8 +72,8 @@ public interface MailboxPropertyManager {
 	 * derived from the v3 Onion Service public key.
 	 * @return The properties sent.
 	 */
-	MailboxPropertiesUpdate createAndSendProperties(ContactId c,
-			String ownOnion) throws DbException;
+	MailboxPropertiesUpdate createAndSendProperties(Transaction txn,
+			ContactId c, String ownOnion) throws DbException;
 
 	void sendEmptyProperties(ContactId c) throws DbException;
 
