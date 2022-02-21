@@ -104,7 +104,7 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 
 	@Override
 	public void removingContact(Transaction txn, Contact c) throws DbException {
-		// TODO
+		db.removeGroup(txn, getContactGroup(c));
 	}
 
 	@Override
