@@ -19,7 +19,6 @@ import org.briarproject.bramble.api.mailbox.MailboxAuthToken;
 import org.briarproject.bramble.api.mailbox.MailboxFolderId;
 import org.briarproject.bramble.api.mailbox.MailboxPropertiesUpdate;
 import org.briarproject.bramble.api.mailbox.MailboxPropertyManager;
-import org.briarproject.bramble.api.mailbox.MailboxSettingsManager;
 import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Group.Visibility;
@@ -51,7 +50,6 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 	private final MetadataParser metadataParser;
 	private final ContactGroupFactory contactGroupFactory;
 	private final Clock clock;
-	private final MailboxSettingsManager mailboxSettingsManager;
 	private final SecureRandom secureRandom;
 	private final Group localGroup;
 
@@ -60,7 +58,6 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 			ClientVersioningManager clientVersioningManager,
 			MetadataParser metadataParser,
 			ContactGroupFactory contactGroupFactory, Clock clock,
-			MailboxSettingsManager mailboxSettingsManager,
 			CryptoComponent crypto) {
 		this.db = db;
 		this.clientHelper = clientHelper;
@@ -68,7 +65,6 @@ class MailboxPropertyManagerImpl implements MailboxPropertyManager,
 		this.metadataParser = metadataParser;
 		this.contactGroupFactory = contactGroupFactory;
 		this.clock = clock;
-		this.mailboxSettingsManager = mailboxSettingsManager;
 		this.secureRandom = crypto.getSecureRandom();
 		localGroup = contactGroupFactory.createLocalGroup(CLIENT_ID,
 				MAJOR_VERSION);
