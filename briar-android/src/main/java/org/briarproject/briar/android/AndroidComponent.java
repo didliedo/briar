@@ -55,6 +55,7 @@ import org.briarproject.briar.android.removabledrive.ChooserFragment;
 import org.briarproject.briar.android.removabledrive.ReceiveFragment;
 import org.briarproject.briar.android.removabledrive.SendFragment;
 import org.briarproject.briar.android.settings.ConnectionsFragment;
+import org.briarproject.briar.android.settings.DisplayFragment;
 import org.briarproject.briar.android.settings.NotificationsFragment;
 import org.briarproject.briar.android.settings.SecurityFragment;
 import org.briarproject.briar.android.settings.SettingsFragment;
@@ -222,6 +223,8 @@ public interface AndroidComponent
 	void inject(BriarModelLoader briarModelLoader);
 
 	void inject(SettingsFragment settingsFragment);
+
+	void inject(DisplayFragment displayFragment);
 
 	void inject(ConnectionsFragment connectionsFragment);
 
