@@ -26,6 +26,10 @@ import static org.briarproject.bramble.api.sync.RecordTypes.REQUEST;
 import static org.briarproject.bramble.api.sync.RecordTypes.VERSIONS;
 import static org.briarproject.bramble.api.sync.SyncConstants.PROTOCOL_VERSION;
 
+/**
+ * see the BSP-Specs
+ */
+
 @NotThreadSafe
 @NotNullByDefault
 class SyncRecordWriterImpl implements SyncRecordWriter {

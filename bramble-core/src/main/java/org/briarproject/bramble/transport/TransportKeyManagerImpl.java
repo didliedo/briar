@@ -63,6 +63,9 @@ class TransportKeyManagerImpl implements TransportKeyManager {
 
 	@GuardedBy("lock")
 	private final Map<KeySetId, MutableTransportKeySet> keys = new HashMap<>();
+	/**
+	 * List of all Tags
+	 */
 	@GuardedBy("lock")
 	private final Map<Bytes, TagContext> inContexts = new HashMap<>();
 	@GuardedBy("lock")

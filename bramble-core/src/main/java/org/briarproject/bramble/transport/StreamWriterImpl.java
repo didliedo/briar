@@ -22,7 +22,7 @@ class StreamWriterImpl extends OutputStream implements StreamWriter {
 
 	private final StreamEncrypter encrypter;
 	private final byte[] payload;
-
+	///@var length Stores how long the content that is currently in the buffer "payload" is.
 	private int length = 0;
 
 	StreamWriterImpl(StreamEncrypter encrypter) {
@@ -68,7 +68,8 @@ class StreamWriterImpl extends OutputStream implements StreamWriter {
 
 	@Override
 	public void write(byte[] b, int off, int len) throws IOException {
-		int available = payload.length - length;
+		//Frame Segmentation
+		int available = payload.length - length; // available = How much free space ther is at the end of the buffer "payload"
 		while (available <= len) {
 			System.arraycopy(b, off, payload, length, available);
 			length += available;
