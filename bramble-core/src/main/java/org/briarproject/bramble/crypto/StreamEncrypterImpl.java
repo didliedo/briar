@@ -27,6 +27,7 @@ import static org.briarproject.bramble.util.ByteUtils.INT_64_BYTES;
 
 /**
  * See the BTP-Specs to understand whats going on here
+ * https://code.briarproject.org/briar/briar-spec/blob/master/protocols/BTP.md
  */
 @NotThreadSafe
 @NotNullByDefault
