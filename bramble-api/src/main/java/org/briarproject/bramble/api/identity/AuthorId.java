@@ -1,7 +1,7 @@
 package org.briarproject.bramble.api.identity;
 
 import org.briarproject.bramble.api.UniqueId;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -20,10 +20,5 @@ public class AuthorId extends UniqueId {
 
 	public AuthorId(byte[] id) {
 		super(id);
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		return o instanceof AuthorId && super.equals(o);
 	}
 }

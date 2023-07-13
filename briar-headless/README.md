@@ -9,24 +9,27 @@ or to develop your own user interface for it.
 
 The REST API peer comes as a `jar` file
 and needs a Java Runtime Environment (JRE) that supports at least Java 8.
-It currently works only on GNU/Linux operating systems.
+It currently works on GNU/Linux operating systems, on Windows and on macOS.
 
 To build the `jar` file, you need to specify the combination of architecture and platform:
 
     $ ./gradlew --configure-on-demand briar-headless:x86LinuxJar
     $ ./gradlew --configure-on-demand briar-headless:aarch64LinuxJar
     $ ./gradlew --configure-on-demand briar-headless:armhfLinuxJar
+    $ ./gradlew --configure-on-demand briar-headless:windowsJar
+    $ ./gradlew --configure-on-demand briar-headless:x86MacOsJar
+    $ ./gradlew --configure-on-demand briar-headless:aarch64MacOsJar
 
 You can start the peer (and its API server) like this:
 
-    $ java -jar briar-headless/build/libs/briar-headless.jar
+    $ java -jar briar-headless/build/libs/briar-headless-<platform>-<architecture>.jar
 
 It is possible to put parameters at the end.
 Try `--help` for a list of options.
 
 On the first start, it will ask you to create a user account:
 
-    $ java -jar briar-headless.jar
+    $ java -jar briar-headless-linux-x86_64.jar
     No account found. Let's create one!
 
     Nickname: testuser
@@ -49,6 +52,11 @@ You can test that things work as expected by running:
 The answer is an empty JSON array, because you don't have any contacts.
 Note that the HTTP request sets an `Authorization` header with the bearer token.
 A missing or wrong token will result in a `401` response.
+
+To run on macOS you will need to sign the native tor binaries included in the
+jar file. To do so, extract the files in `aarch64` or `x86_64` depending on your
+system architecture, sign them using `codesign` and replace the original files
+in the jar files with the signed ones.
 
 ## REST API
 
@@ -368,7 +376,6 @@ are:
   identity key. This happens for contacts added remotely or via introduction.
   * `verified`: The author is one of our contacts and we verified their identity key.
   * `ourselves`: The user is the author of the blog post.
-  * `anonymous`: This status is deprecated and no longer used. It will be removed in future versions.
 
 ### Writing a blog post
 

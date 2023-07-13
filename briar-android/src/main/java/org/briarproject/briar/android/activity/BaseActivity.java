@@ -6,8 +6,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.AndroidComponent;
 import org.briarproject.briar.android.BriarApplication;
@@ -21,6 +19,8 @@ import org.briarproject.briar.android.widget.TapSafeFrameLayout;
 import org.briarproject.briar.android.widget.TapSafeFrameLayout.OnTapFilteredListener;
 import org.briarproject.briar.api.android.ScreenFilterMonitor;
 import org.briarproject.briar.api.android.ScreenFilterMonitor.AppDetails;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -46,6 +46,7 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Logger.getLogger;
 import static org.briarproject.briar.android.TestingConstants.PREVENT_SCREENSHOTS;
 import static org.briarproject.briar.android.util.UiUtils.hideSoftKeyboard;
+import static org.briarproject.briar.android.util.UiUtils.showFragment;
 
 /**
  * Warning: Some activities don't extend {@link BaseActivity}.
@@ -177,19 +178,7 @@ public abstract class BaseActivity extends AppCompatActivity
 
 	public void showNextFragment(BaseFragment f) {
 		if (!getLifecycle().getCurrentState().isAtLeast(STARTED)) return;
-		getSupportFragmentManager().beginTransaction()
-				.setCustomAnimations(R.anim.step_next_in,
-						R.anim.step_previous_out, R.anim.step_previous_in,
-						R.anim.step_next_out)
-				.replace(R.id.fragmentContainer, f, f.getUniqueTag())
-				.addToBackStack(f.getUniqueTag())
-				.commit();
-	}
-
-	protected boolean isFragmentAdded(String fragmentTag) {
-		FragmentManager fm = getSupportFragmentManager();
-		Fragment f = fm.findFragmentByTag(fragmentTag);
-		return f != null && f.isAdded();
+		showFragment(getSupportFragmentManager(), f, f.getUniqueTag());
 	}
 
 	private boolean showScreenFilterWarning() {

@@ -15,7 +15,6 @@ import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Metadata;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager.OpenDatabaseHook;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.ClientId;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Group.Visibility;
@@ -27,6 +26,7 @@ import org.briarproject.bramble.api.versioning.ClientVersioningManager;
 import org.briarproject.bramble.api.versioning.ClientVersioningManager.ClientVersioningHook;
 import org.briarproject.briar.api.autodelete.event.ConversationMessagesDeletedEvent;
 import org.briarproject.briar.api.client.MessageTracker;
+import org.briarproject.briar.api.client.ProtocolStateException;
 import org.briarproject.briar.api.client.SessionId;
 import org.briarproject.briar.api.conversation.ConversationMessageHeader;
 import org.briarproject.briar.api.conversation.ConversationRequest;
@@ -36,6 +36,7 @@ import org.briarproject.briar.api.sharing.Shareable;
 import org.briarproject.briar.api.sharing.SharingInvitationItem;
 import org.briarproject.briar.api.sharing.SharingManager;
 import org.briarproject.briar.client.ConversationClientImpl;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -49,14 +50,20 @@ import java.util.Set;
 import javax.annotation.Nullable;
 
 import static org.briarproject.bramble.api.sync.Group.Visibility.SHARED;
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_DO_NOT_SHARE;
 import static org.briarproject.briar.api.autodelete.AutoDeleteConstants.NO_AUTO_DELETE_TIMER;
+import static org.briarproject.briar.api.sharing.SharingManager.SharingStatus.SHAREABLE;
 import static org.briarproject.briar.sharing.MessageType.ABORT;
 import static org.briarproject.briar.sharing.MessageType.ACCEPT;
 import static org.briarproject.briar.sharing.MessageType.DECLINE;
 import static org.briarproject.briar.sharing.MessageType.INVITE;
 import static org.briarproject.briar.sharing.MessageType.LEAVE;
 import static org.briarproject.briar.sharing.State.LOCAL_INVITED;
+import static org.briarproject.briar.sharing.State.LOCAL_LEFT;
+import static org.briarproject.briar.sharing.State.REMOTE_HANGING;
+import static org.briarproject.briar.sharing.State.REMOTE_INVITED;
 import static org.briarproject.briar.sharing.State.SHARING;
+import static org.briarproject.briar.sharing.State.START;
 
 @NotNullByDefault
 abstract class SharingManagerImpl<S extends Shareable>
@@ -133,8 +140,8 @@ abstract class SharingManagerImpl<S extends Shareable>
 	}
 
 	@Override
-	protected boolean incomingMessage(Transaction txn, Message m, BdfList body,
-			BdfDictionary d) throws DbException, FormatException {
+	protected DeliveryAction incomingMessage(Transaction txn, Message m,
+			BdfList body, BdfDictionary d) throws DbException, FormatException {
 		// Parse the metadata
 		MessageMetadata meta = messageParser.parseMetadata(d);
 		// set the clean-up timer that will be started when message gets read
@@ -157,7 +164,7 @@ abstract class SharingManagerImpl<S extends Shareable>
 		}
 		// Store the updated session
 		storeSession(txn, storageId, session);
-		return false;
+		return ACCEPT_DO_NOT_SHARE;
 	}
 
 	/**
@@ -258,11 +265,17 @@ abstract class SharingManagerImpl<S extends Shareable>
 	@Override
 	public void sendInvitation(GroupId shareableId, ContactId contactId,
 			@Nullable String text) throws DbException {
+		db.transaction(false,
+				txn -> sendInvitation(txn, shareableId, contactId, text));
+	}
+
+	@Override
+	public void sendInvitation(Transaction txn, GroupId shareableId,
+			ContactId contactId, @Nullable String text) throws DbException {
 		SessionId sessionId = getSessionId(shareableId);
-		Transaction txn = db.startTransaction(false);
 		try {
 			Contact contact = db.getContact(txn, contactId);
-			if (!canBeShared(txn, shareableId, contact))
+			if (getSharingStatus(txn, shareableId, contact) != SHAREABLE)
 				// we might have received an invitation in the meantime
 				return;
 			// Look up the session, if there is one
@@ -285,11 +298,8 @@ abstract class SharingManagerImpl<S extends Shareable>
 			session = engine.onInviteAction(txn, session, text);
 			// Store the updated session
 			storeSession(txn, storageId, session);
-			db.commitTransaction(txn);
 		} catch (FormatException e) {
 			throw new DbException(e);
-		} finally {
-			db.endTransaction(txn);
 		}
 	}
 
@@ -300,10 +310,22 @@ abstract class SharingManagerImpl<S extends Shareable>
 	}
 
 	@Override
+	public void respondToInvitation(Transaction txn, S s, Contact c,
+			boolean accept) throws DbException {
+		respondToInvitation(txn, c.getId(), getSessionId(s.getId()), accept);
+	}
+
+	@Override
 	public void respondToInvitation(ContactId c, SessionId id, boolean accept)
 			throws DbException {
 		db.transaction(false,
 				txn -> respondToInvitation(txn, c, id, accept, false));
+	}
+
+	@Override
+	public void respondToInvitation(Transaction txn, ContactId c, SessionId id,
+			boolean accept) throws DbException {
+		respondToInvitation(txn, c, id, accept, false);
 	}
 
 	private void respondToInvitation(Transaction txn, ContactId c,
@@ -389,10 +411,15 @@ abstract class SharingManagerImpl<S extends Shareable>
 	@Override
 	public Collection<SharingInvitationItem> getInvitations()
 			throws DbException {
+		return db.transactionWithResult(true, this::getInvitations);
+	}
+
+	@Override
+	public Collection<SharingInvitationItem> getInvitations(Transaction txn)
+			throws DbException {
 		List<SharingInvitationItem> items = new ArrayList<>();
 		BdfDictionary query = messageParser.getInvitesAvailableToAnswerQuery();
 		Map<S, Collection<Contact>> sharers = new HashMap<>();
-		Transaction txn = db.startTransaction(true);
 		try {
 			// get invitations from each contact
 			for (Contact c : db.getContacts(txn)) {
@@ -422,12 +449,9 @@ abstract class SharingManagerImpl<S extends Shareable>
 						new SharingInvitationItem(s, subscribed, contacts);
 				items.add(invitation);
 			}
-			db.commitTransaction(txn);
 			return items;
 		} catch (FormatException e) {
 			throw new DbException(e);
-		} finally {
-			db.endTransaction(txn);
 		}
 	}
 
@@ -449,33 +473,42 @@ abstract class SharingManagerImpl<S extends Shareable>
 	}
 
 	@Override
-	public boolean canBeShared(GroupId g, Contact c) throws DbException {
+	public SharingStatus getSharingStatus(GroupId g, Contact c)
+			throws DbException {
 		Transaction txn = db.startTransaction(true);
 		try {
-			boolean canBeShared = canBeShared(txn, g, c);
+			SharingStatus sharingStatus = getSharingStatus(txn, g, c);
 			db.commitTransaction(txn);
-			return canBeShared;
+			return sharingStatus;
 		} finally {
 			db.endTransaction(txn);
 		}
 	}
 
-	private boolean canBeShared(Transaction txn, GroupId g, Contact c)
+	@Override
+	public SharingStatus getSharingStatus(Transaction txn, GroupId g, Contact c)
 			throws DbException {
 		// The group can't be shared unless the contact supports the client
 		Visibility client = clientVersioningManager.getClientVisibility(txn,
 				c.getId(), getShareableClientId(), getShareableMajorVersion());
-		if (client != SHARED) return false;
+		if (client != SHARED) return SharingStatus.NOT_SUPPORTED;
 		GroupId contactGroupId = getContactGroup(c).getId();
 		SessionId sessionId = getSessionId(g);
 		try {
 			StoredSession ss = getSession(txn, contactGroupId, sessionId);
 			// If there's no session, we can share the group with the contact
-			if (ss == null) return true;
+			if (ss == null) return SharingStatus.SHAREABLE;
 			// If the session's in the right state, the contact can be invited
 			Session session =
 					sessionParser.parseSession(contactGroupId, ss.bdfSession);
-			return session.getState().canInvite();
+			State state = session.getState();
+			if (state == START) return SharingStatus.SHAREABLE;
+			if (state == LOCAL_INVITED) return SharingStatus.INVITE_RECEIVED;
+			if (state == REMOTE_INVITED) return SharingStatus.INVITE_SENT;
+			if (state == SHARING) return SharingStatus.SHARING;
+			if (state == LOCAL_LEFT || state == REMOTE_HANGING)
+				throw new ProtocolStateException();
+			throw new AssertionError("Unhandled state: " + state.name());
 		} catch (FormatException e) {
 			throw new DbException(e);
 		}
@@ -571,9 +604,9 @@ abstract class SharingManagerImpl<S extends Shareable>
 			// get all sessions and their states
 			Map<GroupId, DeletableSession> sessions = new HashMap<>();
 			for (BdfDictionary d : metadata.values()) {
-				if (!sessionParser.isSession(d)) continue;
 				Session session;
 				try {
+					if (!sessionParser.isSession(d)) continue;
 					session = sessionParser.parseSession(contactGroup, d);
 				} catch (FormatException e) {
 					throw new DbException(e);
@@ -635,13 +668,12 @@ abstract class SharingManagerImpl<S extends Shareable>
 
 		// assign protocol messages to their sessions
 		for (Entry<MessageId, BdfDictionary> entry : metadata.entrySet()) {
-			// skip all sessions, we are only interested in messages
-			BdfDictionary d = entry.getValue();
-			if (sessionParser.isSession(d)) continue;
-
 			// parse message metadata and skip messages not visible in UI
 			MessageMetadata m;
 			try {
+				// skip all sessions, we are only interested in messages
+				BdfDictionary d = entry.getValue();
+				if (sessionParser.isSession(d)) continue;
 				m = messageParser.parseMetadata(d);
 			} catch (FormatException e) {
 				throw new DbException(e);

@@ -22,7 +22,6 @@ import org.hamcrest.Description;
 import org.jmock.Expectations;
 import org.jmock.api.Action;
 import org.jmock.api.Invocation;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -72,13 +71,9 @@ public class TransportKeyManagerImplTest extends BrambleMockTestCase {
 	private final SecretKey rootKey = getSecretKey();
 	private final Random random = new Random();
 
-	private TransportKeyManager transportKeyManager;
-
-	@Before
-	public void setUp() {
-		transportKeyManager = new TransportKeyManagerImpl(db, transportCrypto,
-				dbExecutor, scheduler, clock, transportId, maxLatency);
-	}
+	private final TransportKeyManager transportKeyManager =
+			new TransportKeyManagerImpl(db, transportCrypto, dbExecutor,
+					scheduler, clock, transportId, maxLatency);
 
 	@Test
 	public void testKeysAreUpdatedAtStartup() throws Exception {
@@ -391,6 +386,76 @@ public class TransportKeyManagerImplTest extends BrambleMockTestCase {
 		assertEquals(REORDERING_WINDOW_SIZE * 3 + 1, tags.size());
 		// The second request should return null, the tag has already been used
 		assertNull(transportKeyManager.getStreamContext(txn, tag));
+	}
+
+	@Test
+	public void testGetStreamContextOnlyAndMarkTag() throws Exception {
+		boolean alice = random.nextBoolean();
+		TransportKeys transportKeys = createTransportKeys(1000, 0, true);
+		Transaction txn = new Transaction(null, false);
+
+		// Keep a copy of the tags
+		List<byte[]> tags = new ArrayList<>();
+
+		context.checking(new Expectations() {{
+			oneOf(transportCrypto).deriveRotationKeys(transportId, rootKey,
+					1000, alice, true);
+			will(returnValue(transportKeys));
+			// Get the current time (the start of time period 1000)
+			oneOf(clock).currentTimeMillis();
+			will(returnValue(timePeriodLength * 1000));
+			// Encode the tags (3 sets)
+			for (long i = 0; i < REORDERING_WINDOW_SIZE; i++) {
+				exactly(3).of(transportCrypto).encodeTag(
+						with(any(byte[].class)), with(tagKey),
+						with(PROTOCOL_VERSION), with(i));
+				will(new EncodeTagAction(tags));
+			}
+			// Updated the transport keys (the keys are unaffected)
+			oneOf(transportCrypto).updateTransportKeys(transportKeys, 1000);
+			will(returnValue(transportKeys));
+			// Save the keys
+			oneOf(db).addTransportKeys(txn, contactId, transportKeys);
+			will(returnValue(keySetId));
+			// Encode a new tag after sliding the window
+			oneOf(transportCrypto).encodeTag(with(any(byte[].class)),
+					with(tagKey), with(PROTOCOL_VERSION),
+					with((long) REORDERING_WINDOW_SIZE));
+			will(new EncodeTagAction(tags));
+			// Save the reordering window (previous time period, base 1)
+			oneOf(db).setReorderingWindow(txn, keySetId, transportId, 999,
+					1, new byte[REORDERING_WINDOW_SIZE / 8]);
+		}});
+
+		// The timestamp is at the start of time period 1000
+		long timestamp = timePeriodLength * 1000;
+		assertEquals(keySetId, transportKeyManager.addRotationKeys(
+				txn, contactId, rootKey, timestamp, alice, true));
+		assertTrue(transportKeyManager.canSendOutgoingStreams(contactId));
+		// Use the first tag (previous time period, stream number 0)
+		assertEquals(REORDERING_WINDOW_SIZE * 3, tags.size());
+		byte[] tag = tags.get(0);
+		// Repeated request should return same stream context
+		StreamContext ctx = transportKeyManager.getStreamContextOnly(txn, tag);
+		assertNotNull(ctx);
+		assertEquals(contactId, ctx.getContactId());
+		assertEquals(transportId, ctx.getTransportId());
+		assertEquals(tagKey, ctx.getTagKey());
+		assertEquals(headerKey, ctx.getHeaderKey());
+		assertEquals(0L, ctx.getStreamNumber());
+		ctx = transportKeyManager.getStreamContextOnly(txn, tag);
+		assertNotNull(ctx);
+		assertEquals(contactId, ctx.getContactId());
+		assertEquals(transportId, ctx.getTransportId());
+		assertEquals(tagKey, ctx.getTagKey());
+		assertEquals(headerKey, ctx.getHeaderKey());
+		assertEquals(0L, ctx.getStreamNumber());
+		// Then mark tag as recognised
+		transportKeyManager.markTagAsRecognised(txn, tag);
+		// Another tag should have been encoded
+		assertEquals(REORDERING_WINDOW_SIZE * 3 + 1, tags.size());
+		// Finally ensure the used tag is not recognised again
+		assertNull(transportKeyManager.getStreamContextOnly(txn, tag));
 	}
 
 	@Test

@@ -5,10 +5,10 @@
 
 	<item
 		android:id="@+id/action_group_invite"
-		android:icon="@drawable/social_share_white"
+		android:icon="@drawable/ic_add_white"
 		android:title="@string/groups_invite_members"
 		android:visible="false"
-		app:showAsAction="ifRoom"
+		app:showAsAction="never"
 		tools:visible="true" />
 
 	<item

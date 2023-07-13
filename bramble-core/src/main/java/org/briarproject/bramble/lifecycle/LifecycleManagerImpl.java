@@ -11,13 +11,14 @@ import org.briarproject.bramble.api.lifecycle.LifecycleManager;
 import org.briarproject.bramble.api.lifecycle.Service;
 import org.briarproject.bramble.api.lifecycle.ServiceException;
 import org.briarproject.bramble.api.lifecycle.event.LifecycleEvent;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.bramble.api.system.Clock;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Logger;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -28,17 +29,22 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.LifecycleState.COMPACTING_DATABASE;
+import static org.briarproject.bramble.api.lifecycle.LifecycleManager.LifecycleState.CREATED;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.LifecycleState.MIGRATING_DATABASE;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.LifecycleState.RUNNING;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.LifecycleState.STARTING;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.LifecycleState.STARTING_SERVICES;
+import static org.briarproject.bramble.api.lifecycle.LifecycleManager.LifecycleState.STOPPED;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.LifecycleState.STOPPING;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult.ALREADY_RUNNING;
+import static org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult.CLOCK_ERROR;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult.DATA_TOO_NEW_ERROR;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult.DATA_TOO_OLD_ERROR;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult.DB_ERROR;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult.SERVICE_ERROR;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult.SUCCESS;
+import static org.briarproject.bramble.api.system.Clock.MAX_REASONABLE_TIME_MS;
+import static org.briarproject.bramble.api.system.Clock.MIN_REASONABLE_TIME_MS;
 import static org.briarproject.bramble.util.LogUtils.logDuration;
 import static org.briarproject.bramble.util.LogUtils.logException;
 import static org.briarproject.bramble.util.LogUtils.now;
@@ -52,20 +58,22 @@ class LifecycleManagerImpl implements LifecycleManager, MigrationListener {
 
 	private final DatabaseComponent db;
 	private final EventBus eventBus;
+	private final Clock clock;
 	private final List<Service> services;
 	private final List<OpenDatabaseHook> openDatabaseHooks;
 	private final List<ExecutorService> executors;
-	private final Semaphore startStopSemaphore = new Semaphore(1);
 	private final CountDownLatch dbLatch = new CountDownLatch(1);
 	private final CountDownLatch startupLatch = new CountDownLatch(1);
 	private final CountDownLatch shutdownLatch = new CountDownLatch(1);
-
-	private volatile LifecycleState state = STARTING;
+	private final AtomicReference<LifecycleState> state =
+			new AtomicReference<>(CREATED);
 
 	@Inject
-	LifecycleManagerImpl(DatabaseComponent db, EventBus eventBus) {
+	LifecycleManagerImpl(DatabaseComponent db, EventBus eventBus,
+			Clock clock) {
 		this.db = db;
 		this.eventBus = eventBus;
+		this.clock = clock;
 		services = new CopyOnWriteArrayList<>();
 		openDatabaseHooks = new CopyOnWriteArrayList<>();
 		executors = new CopyOnWriteArrayList<>();
@@ -95,9 +103,16 @@ class LifecycleManagerImpl implements LifecycleManager, MigrationListener {
 
 	@Override
 	public StartResult startServices(SecretKey dbKey) {
-		if (!startStopSemaphore.tryAcquire()) {
-			LOG.info("Already starting or stopping");
+		if (!state.compareAndSet(CREATED, STARTING)) {
+			LOG.warning("Already running");
 			return ALREADY_RUNNING;
+		}
+		long now = clock.currentTimeMillis();
+		if (now < MIN_REASONABLE_TIME_MS || now > MAX_REASONABLE_TIME_MS) {
+			if (LOG.isLoggable(WARNING)) {
+				LOG.warning("System clock is unreasonable: " + now);
+			}
+			return CLOCK_ERROR;
 		}
 		try {
 			LOG.info("Opening database");
@@ -121,7 +136,7 @@ class LifecycleManagerImpl implements LifecycleManager, MigrationListener {
 			});
 
 			LOG.info("Starting services");
-			state = STARTING_SERVICES;
+			state.set(STARTING_SERVICES);
 			dbLatch.countDown();
 			eventBus.broadcast(new LifecycleEvent(STARTING_SERVICES));
 
@@ -134,7 +149,7 @@ class LifecycleManagerImpl implements LifecycleManager, MigrationListener {
 				}
 			}
 
-			state = RUNNING;
+			state.set(RUNNING);
 			startupLatch.countDown();
 			eventBus.broadcast(new LifecycleEvent(RUNNING));
 			return SUCCESS;
@@ -150,59 +165,58 @@ class LifecycleManagerImpl implements LifecycleManager, MigrationListener {
 		} catch (ServiceException e) {
 			logException(LOG, WARNING, e);
 			return SERVICE_ERROR;
-		} finally {
-			startStopSemaphore.release();
 		}
 	}
 
 	@Override
 	public void onDatabaseMigration() {
-		state = MIGRATING_DATABASE;
+		state.set(MIGRATING_DATABASE);
 		eventBus.broadcast(new LifecycleEvent(MIGRATING_DATABASE));
 	}
 
 	@Override
 	public void onDatabaseCompaction() {
-		state = COMPACTING_DATABASE;
+		state.set(COMPACTING_DATABASE);
 		eventBus.broadcast(new LifecycleEvent(COMPACTING_DATABASE));
 	}
 
 	@Override
 	public void stopServices() {
-		try {
-			startStopSemaphore.acquire();
-		} catch (InterruptedException e) {
-			LOG.warning("Interrupted while waiting to stop services");
+		if (!state.compareAndSet(RUNNING, STOPPING)) {
+			LOG.warning("Not running");
 			return;
 		}
-		try {
-			LOG.info("Stopping services");
-			state = STOPPING;
-			eventBus.broadcast(new LifecycleEvent(STOPPING));
-			for (Service s : services) {
+		LOG.info("Stopping services");
+		eventBus.broadcast(new LifecycleEvent(STOPPING));
+		for (Service s : services) {
+			try {
 				long start = now();
 				s.stopService();
 				if (LOG.isLoggable(FINE)) {
 					logDuration(LOG, "Stopping service "
 							+ s.getClass().getSimpleName(), start);
 				}
+			} catch (ServiceException e) {
+				logException(LOG, WARNING, e);
 			}
-			for (ExecutorService e : executors) {
-				if (LOG.isLoggable(FINE)) {
-					LOG.fine("Stopping executor "
-							+ e.getClass().getSimpleName());
-				}
-				e.shutdownNow();
+		}
+		for (ExecutorService e : executors) {
+			if (LOG.isLoggable(FINE)) {
+				LOG.fine("Stopping executor "
+						+ e.getClass().getSimpleName());
 			}
+			e.shutdownNow();
+		}
+		try {
 			long start = now();
 			db.close();
 			logDuration(LOG, "Closing database", start);
-			shutdownLatch.countDown();
-		} catch (DbException | ServiceException e) {
+		} catch (DbException e) {
 			logException(LOG, WARNING, e);
-		} finally {
-			startStopSemaphore.release();
 		}
+		state.set(STOPPED);
+		shutdownLatch.countDown();
+		eventBus.broadcast(new LifecycleEvent(STOPPED));
 	}
 
 	@Override
@@ -222,6 +236,6 @@ class LifecycleManagerImpl implements LifecycleManager, MigrationListener {
 
 	@Override
 	public LifecycleState getLifecycleState() {
-		return state;
+		return state.get();
 	}
 }

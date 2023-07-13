@@ -1,11 +1,10 @@
 package org.briarproject.bramble.sync;
 
 import org.briarproject.bramble.api.FormatException;
-import org.briarproject.bramble.api.Predicate;
 import org.briarproject.bramble.api.UniqueId;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.record.Record;
 import org.briarproject.bramble.api.record.RecordReader;
+import org.briarproject.bramble.api.record.RecordReader.RecordPredicate;
 import org.briarproject.bramble.api.sync.Ack;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageFactory;
@@ -16,6 +15,7 @@ import org.briarproject.bramble.api.sync.Request;
 import org.briarproject.bramble.api.sync.SyncRecordReader;
 import org.briarproject.bramble.api.sync.Versions;
 import org.briarproject.bramble.util.ByteUtils;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +30,7 @@ import static org.briarproject.bramble.api.sync.RecordTypes.OFFER;
 import static org.briarproject.bramble.api.sync.RecordTypes.PRIORITY;
 import static org.briarproject.bramble.api.sync.RecordTypes.REQUEST;
 import static org.briarproject.bramble.api.sync.RecordTypes.VERSIONS;
+import static org.briarproject.bramble.api.sync.SyncConstants.MAX_MESSAGE_LENGTH;
 import static org.briarproject.bramble.api.sync.SyncConstants.MAX_SUPPORTED_VERSIONS;
 import static org.briarproject.bramble.api.sync.SyncConstants.MESSAGE_HEADER_LENGTH;
 import static org.briarproject.bramble.api.sync.SyncConstants.PRIORITY_NONCE_BYTES;
@@ -40,12 +41,12 @@ import static org.briarproject.bramble.api.sync.SyncConstants.PROTOCOL_VERSION;
 class SyncRecordReaderImpl implements SyncRecordReader {
 
 	// Accept records with current protocol version, known record type
-	private static final Predicate<Record> ACCEPT = r ->
+	private static final RecordPredicate ACCEPT = r ->
 			r.getProtocolVersion() == PROTOCOL_VERSION &&
 					isKnownRecordType(r.getRecordType());
 
 	// Ignore records with current protocol version, unknown record type
-	private static final Predicate<Record> IGNORE = r ->
+	private static final RecordPredicate IGNORE = r ->
 			r.getProtocolVersion() == PROTOCOL_VERSION &&
 					!isKnownRecordType(r.getRecordType());
 
@@ -125,6 +126,8 @@ class SyncRecordReaderImpl implements SyncRecordReader {
 		if (nextRecord == null) throw new AssertionError();
 		byte[] payload = nextRecord.getPayload();
 		if (payload.length <= MESSAGE_HEADER_LENGTH)
+			throw new FormatException();
+		if (payload.length > MAX_MESSAGE_LENGTH)
 			throw new FormatException();
 		// Validate timestamp
 		long timestamp = ByteUtils.readUint64(payload, UniqueId.LENGTH);

@@ -9,7 +9,6 @@ import org.briarproject.bramble.api.data.BdfReader;
 import org.briarproject.bramble.api.data.BdfReaderFactory;
 import org.briarproject.bramble.api.data.MetadataEncoder;
 import org.briarproject.bramble.api.db.Metadata;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.InvalidMessageException;
 import org.briarproject.bramble.api.sync.Message;
@@ -17,6 +16,7 @@ import org.briarproject.bramble.api.sync.MessageContext;
 import org.briarproject.bramble.api.sync.validation.MessageValidator;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.briar.attachment.CountingInputStream;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -33,7 +33,7 @@ import static org.briarproject.briar.api.attachment.MediaConstants.MSG_KEY_CONTE
 import static org.briarproject.briar.api.attachment.MediaConstants.MSG_KEY_DESCRIPTOR_LENGTH;
 import static org.briarproject.briar.api.autodelete.AutoDeleteConstants.NO_AUTO_DELETE_TIMER;
 import static org.briarproject.briar.api.messaging.MessagingConstants.MAX_ATTACHMENTS_PER_MESSAGE;
-import static org.briarproject.briar.api.messaging.MessagingConstants.MAX_PRIVATE_MESSAGE_INCOMING_TEXT_LENGTH;
+import static org.briarproject.briar.api.messaging.MessagingConstants.MAX_PRIVATE_MESSAGE_TEXT_LENGTH;
 import static org.briarproject.briar.client.MessageTrackerConstants.MSG_KEY_READ;
 import static org.briarproject.briar.messaging.MessageTypes.ATTACHMENT;
 import static org.briarproject.briar.messaging.MessageTypes.PRIVATE_MESSAGE;
@@ -84,7 +84,7 @@ class PrivateMessageValidator implements MessageValidator {
 				context = validateLegacyPrivateMessage(m, list);
 			} else {
 				// Private message or attachment
-				int messageType = list.getLong(0).intValue();
+				int messageType = list.getInt(0);
 				if (messageType == PRIVATE_MESSAGE) {
 					if (!reader.eof()) throw new FormatException();
 					context = validatePrivateMessage(m, list);
@@ -106,7 +106,7 @@ class PrivateMessageValidator implements MessageValidator {
 		// Client version 0.0: Private message text
 		checkSize(body, 1);
 		String text = body.getString(0);
-		checkLength(text, 0, MAX_PRIVATE_MESSAGE_INCOMING_TEXT_LENGTH);
+		checkLength(text, 0, MAX_PRIVATE_MESSAGE_TEXT_LENGTH);
 		// Return the metadata
 		BdfDictionary meta = new BdfDictionary();
 		meta.put(MSG_KEY_TIMESTAMP, m.getTimestamp());
@@ -123,7 +123,7 @@ class PrivateMessageValidator implements MessageValidator {
 		// attachment headers, optional auto-delete timer.
 		checkSize(body, 3, 4);
 		String text = body.getOptionalString(1);
-		checkLength(text, 0, MAX_PRIVATE_MESSAGE_INCOMING_TEXT_LENGTH);
+		checkLength(text, 0, MAX_PRIVATE_MESSAGE_TEXT_LENGTH);
 		BdfList headers = body.getList(2);
 		if (text == null) checkSize(headers, 1, MAX_ATTACHMENTS_PER_MESSAGE);
 		else checkSize(headers, 0, MAX_ATTACHMENTS_PER_MESSAGE);

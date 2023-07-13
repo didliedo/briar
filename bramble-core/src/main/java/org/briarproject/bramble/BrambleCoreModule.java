@@ -14,8 +14,10 @@ import org.briarproject.bramble.identity.IdentityModule;
 import org.briarproject.bramble.io.IoModule;
 import org.briarproject.bramble.keyagreement.KeyAgreementModule;
 import org.briarproject.bramble.lifecycle.LifecycleModule;
+import org.briarproject.bramble.mailbox.MailboxModule;
 import org.briarproject.bramble.plugin.PluginModule;
 import org.briarproject.bramble.properties.PropertiesModule;
+import org.briarproject.bramble.qrcode.QrCodeModule;
 import org.briarproject.bramble.record.RecordModule;
 import org.briarproject.bramble.reliability.ReliabilityModule;
 import org.briarproject.bramble.rendezvous.RendezvousModule;
@@ -23,6 +25,7 @@ import org.briarproject.bramble.settings.SettingsModule;
 import org.briarproject.bramble.sync.SyncModule;
 import org.briarproject.bramble.sync.validation.ValidationModule;
 import org.briarproject.bramble.transport.TransportModule;
+import org.briarproject.bramble.transport.agreement.TransportKeyAgreementModule;
 import org.briarproject.bramble.versioning.VersioningModule;
 
 import dagger.Module;
@@ -42,13 +45,16 @@ import dagger.Module;
 		IoModule.class,
 		KeyAgreementModule.class,
 		LifecycleModule.class,
+		MailboxModule.class,
 		PluginModule.class,
 		PropertiesModule.class,
+		QrCodeModule.class,
 		RecordModule.class,
 		ReliabilityModule.class,
 		RendezvousModule.class,
 		SettingsModule.class,
 		SyncModule.class,
+		TransportKeyAgreementModule.class,
 		TransportModule.class,
 		ValidationModule.class,
 		VersioningModule.class

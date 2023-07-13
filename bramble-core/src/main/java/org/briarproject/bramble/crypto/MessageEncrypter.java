@@ -1,49 +1,50 @@
 package org.briarproject.bramble.crypto;
 
+import org.bouncycastle.asn1.teletrust.TeleTrusTNamedCurves;
+import org.bouncycastle.asn1.x9.X9ECParameters;
+import org.bouncycastle.crypto.AsymmetricCipherKeyPair;
+import org.bouncycastle.crypto.BasicAgreement;
+import org.bouncycastle.crypto.BlockCipher;
+import org.bouncycastle.crypto.CipherParameters;
+import org.bouncycastle.crypto.CryptoException;
+import org.bouncycastle.crypto.DerivationFunction;
+import org.bouncycastle.crypto.KeyEncoder;
+import org.bouncycastle.crypto.Mac;
+import org.bouncycastle.crypto.agreement.ECDHCBasicAgreement;
+import org.bouncycastle.crypto.digests.SHA256Digest;
+import org.bouncycastle.crypto.engines.AESLightEngine;
+import org.bouncycastle.crypto.engines.IESEngine;
+import org.bouncycastle.crypto.generators.ECKeyPairGenerator;
+import org.bouncycastle.crypto.generators.EphemeralKeyPairGenerator;
+import org.bouncycastle.crypto.generators.KDF2BytesGenerator;
+import org.bouncycastle.crypto.macs.HMac;
+import org.bouncycastle.crypto.modes.CBCBlockCipher;
+import org.bouncycastle.crypto.paddings.PaddedBufferedBlockCipher;
+import org.bouncycastle.crypto.params.AsymmetricKeyParameter;
+import org.bouncycastle.crypto.params.ECDomainParameters;
+import org.bouncycastle.crypto.params.ECKeyGenerationParameters;
+import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
+import org.bouncycastle.crypto.params.ECPublicKeyParameters;
+import org.bouncycastle.crypto.params.IESWithCipherParameters;
+import org.bouncycastle.crypto.parsers.ECIESPublicKeyParser;
 import org.briarproject.bramble.api.crypto.KeyPair;
 import org.briarproject.bramble.api.crypto.KeyParser;
 import org.briarproject.bramble.api.crypto.PrivateKey;
 import org.briarproject.bramble.api.crypto.PublicKey;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.util.StringUtils;
-import org.spongycastle.asn1.teletrust.TeleTrusTNamedCurves;
-import org.spongycastle.asn1.x9.X9ECParameters;
-import org.spongycastle.crypto.AsymmetricCipherKeyPair;
-import org.spongycastle.crypto.BasicAgreement;
-import org.spongycastle.crypto.BlockCipher;
-import org.spongycastle.crypto.CipherParameters;
-import org.spongycastle.crypto.CryptoException;
-import org.spongycastle.crypto.DerivationFunction;
-import org.spongycastle.crypto.KeyEncoder;
-import org.spongycastle.crypto.Mac;
-import org.spongycastle.crypto.agreement.ECDHCBasicAgreement;
-import org.spongycastle.crypto.digests.SHA256Digest;
-import org.spongycastle.crypto.engines.AESLightEngine;
-import org.spongycastle.crypto.engines.IESEngine;
-import org.spongycastle.crypto.generators.ECKeyPairGenerator;
-import org.spongycastle.crypto.generators.EphemeralKeyPairGenerator;
-import org.spongycastle.crypto.generators.KDF2BytesGenerator;
-import org.spongycastle.crypto.macs.HMac;
-import org.spongycastle.crypto.modes.CBCBlockCipher;
-import org.spongycastle.crypto.paddings.PaddedBufferedBlockCipher;
-import org.spongycastle.crypto.params.AsymmetricKeyParameter;
-import org.spongycastle.crypto.params.ECDomainParameters;
-import org.spongycastle.crypto.params.ECKeyGenerationParameters;
-import org.spongycastle.crypto.params.ECPrivateKeyParameters;
-import org.spongycastle.crypto.params.ECPublicKeyParameters;
-import org.spongycastle.crypto.params.IESWithCipherParameters;
-import org.spongycastle.crypto.parsers.ECIESPublicKeyParser;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
-import java.nio.charset.Charset;
 import java.security.SecureRandom;
 import java.util.Scanner;
 
 import javax.annotation.concurrent.Immutable;
+
+import static org.briarproject.bramble.util.StringUtils.UTF_8;
 
 @Immutable
 @NotNullByDefault
@@ -228,7 +229,7 @@ public class MessageEncrypter {
 		PublicKey publicKey =
 				encrypter.getKeyParser().parsePublicKey(keyBytes);
 		String message = readFully(System.in);
-		byte[] plaintext = message.getBytes(Charset.forName("UTF-8"));
+		byte[] plaintext = message.getBytes(UTF_8);
 		byte[] ciphertext = encrypter.encrypt(publicKey, plaintext);
 		System.out.println(AsciiArmour.wrap(ciphertext, LINE_LENGTH));
 	}
@@ -242,7 +243,7 @@ public class MessageEncrypter {
 				encrypter.getKeyParser().parsePrivateKey(keyBytes);
 		byte[] ciphertext = AsciiArmour.unwrap(readFully(System.in));
 		byte[] plaintext = encrypter.decrypt(privateKey, ciphertext);
-		System.out.println(new String(plaintext, Charset.forName("UTF-8")));
+		System.out.println(new String(plaintext, UTF_8));
 	}
 
 	private static String readFully(InputStream in) throws IOException {

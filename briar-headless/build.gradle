@@ -7,27 +7,54 @@ import static java.util.Collections.list
 plugins {
 	id 'java'
 	id 'idea'
-	id 'org.jetbrains.kotlin.jvm' version '1.3.72'
-	id 'org.jetbrains.kotlin.kapt' version '1.3.72'
+	id 'org.jetbrains.kotlin.jvm'
+	id 'org.jetbrains.kotlin.kapt'
 	id 'witness'
 }
 apply from: 'witness.gradle'
+
+configurations {
+	windows {
+		extendsFrom runtimeClasspath
+	}
+	linux {
+		extendsFrom runtimeClasspath
+	}
+	macos {
+		extendsFrom runtimeClasspath
+	}
+}
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-	implementation project(path: ':briar-core', configuration: 'default')
-	implementation project(path: ':bramble-java', configuration: 'default')
+	implementation project(':bramble-core')
+	implementation project(':bramble-java')
+	implementation project(':briar-core')
 
-	implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.3.72'
+	linux "org.briarproject:tor-linux:$tor_version"
+	linux "org.briarproject:obfs4proxy-linux:$obfs4proxy_version"
+	linux "org.briarproject:snowflake-linux:$snowflake_version"
+
+	windows "org.briarproject:tor-windows:$tor_version"
+	windows "org.briarproject:obfs4proxy-windows:$obfs4proxy_version"
+	windows "org.briarproject:snowflake-windows:$snowflake_version"
+
+	macos "org.briarproject:tor-macos:$tor_version"
+	macos "org.briarproject:obfs4proxy-macos:$obfs4proxy_version"
+	macos "org.briarproject:snowflake-macos:$snowflake_version"
+
+	implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
 	implementation 'io.javalin:javalin:3.5.0'
-	implementation 'org.slf4j:slf4j-simple:1.7.26'
-	implementation 'com.fasterxml.jackson.core:jackson-databind:2.10.0'
+	implementation 'org.slf4j:slf4j-simple:1.7.30'
 	implementation 'com.github.ajalt:clikt:2.2.0'
+	implementation "org.bouncycastle:bcprov-jdk15to18:$bouncy_castle_version"
+	implementation "com.squareup.okhttp3:okhttp:$okhttp_version"
+	implementation "com.fasterxml.jackson.core:jackson-databind:$jackson_version"
+	implementation "org.briarproject:onionwrapper-java:$onionwrapper_version"
 
-	def daggerVersion = '2.24'
-	kapt "com.google.dagger:dagger-compiler:$daggerVersion"
+	kapt "com.google.dagger:dagger-compiler:$dagger_version"
 
 	testImplementation project(path: ':bramble-api', configuration: 'testOutput')
 	testImplementation project(path: ':bramble-core', configuration: 'testOutput')
@@ -36,15 +63,25 @@ dependencies {
 	def junitVersion = '5.5.2'
 	testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
 	testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
-	testRuntime "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
-	testImplementation 'io.mockk:mockk:1.9.3'
+	testImplementation 'io.mockk:mockk:1.12.4'
 	testImplementation 'org.skyscreamer:jsonassert:1.5.0'
-	testImplementation 'khttp:khttp:0.1.0'
+	testImplementation "com.squareup.okhttp3:okhttp:4.10.0"
 
-	kaptTest "com.google.dagger:dagger-compiler:$daggerVersion"
+	testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
+
+	kaptTest "com.google.dagger:dagger-compiler:$dagger_version"
 }
 
-void jarFactory(Jar jarTask, jarArchitecture) {
+void jarFactory(Jar jarTask, os, architecture, configuration) {
+	def jarArchitecture = os + "-" + architecture
+	jarTask.dependsOn(
+			':bramble-api:jar',
+			':bramble-core:jar',
+			':bramble-java:jar',
+			':briar-api:jar',
+			':briar-core:jar'
+	)
+	jarTask.dependsOn(jar)
 	jarTask.doFirst {
 		println 'Building ' + jarArchitecture + ' version has started'
 	}
@@ -55,21 +92,31 @@ void jarFactory(Jar jarTask, jarArchitecture) {
 	}
 	jarTask.setArchiveClassifier(jarArchitecture)
 	jarTask.from {
-		configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+		configuration.collect { it.isDirectory() ? it : zipTree(it) }
 	}
 			{
-				String[] architectures = ["linux-aarch64", "linux-armhf", "linux-x86_64"]
-				for (String arch : architectures) {
-					if (arch != jarArchitecture) {
-						exclude "obfs4proxy_" + arch + ".zip"
-						exclude "tor_" + arch + ".zip"
+				it.duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+				if (os == "linux" || os == "macos") {
+					String[] architectures = [
+							"aarch64",
+							"armhf",
+							"x86_64",
+					]
+					for (String arch : architectures) {
+						if (arch != architecture) {
+							exclude arch + "/obfs4proxy"
+							exclude arch + "/tor"
+							exclude arch + "/snowflake"
+							exclude arch + "/libevent-*.dylib"
+						}
 					}
 				}
+				exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
 			}
 	jarTask.with jar
 	jarTask.doLast {
 		// Rename the original jar
-		File jar = jarTask.archivePath
+		File jar = jarTask.archiveFile.get().asFile
 		String srcPath = jar.toString().replaceFirst('\\.jar$', '.unsorted.jar')
 		File srcFile = new File(srcPath)
 		jar.renameTo(srcFile)
@@ -99,15 +146,35 @@ void jarFactory(Jar jarTask, jarArchitecture) {
 }
 
 task aarch64LinuxJar(type: Jar) {
-	jarFactory(it, 'linux-aarch64')
+	jarFactory(it, 'linux', 'aarch64', configurations.linux)
 }
 
 task armhfLinuxJar(type: Jar) {
-	jarFactory(it, 'linux-armhf')
+	jarFactory(it, 'linux', 'armhf', configurations.linux)
 }
 
 task x86LinuxJar(type: Jar) {
-	jarFactory(it, 'linux-x86_64')
+	jarFactory(it, 'linux', 'x86_64', configurations.linux)
+}
+
+task windowsJar(type: Jar) {
+	jarFactory(it, 'windows', 'x86_64', configurations.windows)
+}
+
+task aarch64MacOsJar(type: Jar) {
+	jarFactory(it, 'macos', 'aarch64', configurations.macos)
+}
+
+task x86MacOsJar(type: Jar) {
+	jarFactory(it, 'macos', 'x86_64', configurations.macos)
+}
+
+task linuxJars {
+	dependsOn(aarch64LinuxJar, armhfLinuxJar, x86LinuxJar)
+}
+
+task macosJars {
+	dependsOn(aarch64MacOsJar, x86MacOsJar)
 }
 
 // At the moment for non-Android projects we need to explicitly mark the code generated by kapt

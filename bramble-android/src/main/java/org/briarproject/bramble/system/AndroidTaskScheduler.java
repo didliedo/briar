@@ -8,12 +8,13 @@ import android.content.Intent;
 import android.os.Process;
 import android.os.SystemClock;
 
+import org.briarproject.android.dontkillmelib.wakelock.AndroidWakeLockManager;
+import org.briarproject.bramble.api.Cancellable;
 import org.briarproject.bramble.api.lifecycle.Service;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.system.AlarmListener;
-import org.briarproject.bramble.api.system.AndroidWakeLockManager;
 import org.briarproject.bramble.api.system.TaskScheduler;
 import org.briarproject.bramble.api.system.Wakeful;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +41,7 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Logger.getLogger;
 import static org.briarproject.bramble.system.AlarmConstants.EXTRA_PID;
 import static org.briarproject.bramble.system.AlarmConstants.REQUEST_ALARM;
+import static org.briarproject.bramble.util.AndroidUtils.getImmutableFlags;
 
 @ThreadSafe
 @NotNullByDefault
@@ -116,10 +118,12 @@ class AndroidTaskScheduler implements TaskScheduler, Service, AlarmListener {
 		long dueMillis = now + MILLISECONDS.convert(delay, unit);
 		Runnable wakeful = () ->
 				wakeLockManager.executeWakefully(task, executor, "TaskHandoff");
-		Future<?> check = scheduleCheckForDueTasks(delay, unit);
-		ScheduledTask s = new ScheduledTask(wakeful, dueMillis, check,
-				cancelled);
+		// Acquire the lock before scheduling the check to ensure the check
+		// doesn't access the task queue before the task has been added
+		ScheduledTask s;
 		synchronized (lock) {
+			Future<?> check = scheduleCheckForDueTasks(delay, unit);
+			s = new ScheduledTask(wakeful, dueMillis, check, cancelled);
 			tasks.add(s);
 		}
 		return s;
@@ -136,6 +140,7 @@ class AndroidTaskScheduler implements TaskScheduler, Service, AlarmListener {
 		return schedule(wrapped, executor, delay, unit, cancelled);
 	}
 
+	@GuardedBy("lock")
 	private Future<?> scheduleCheckForDueTasks(long delay, TimeUnit unit) {
 		Runnable wakeful = () -> wakeLockManager.runWakefully(
 				this::runDueTasks, "TaskScheduler");
@@ -195,7 +200,7 @@ class AndroidTaskScheduler implements TaskScheduler, Service, AlarmListener {
 		Intent i = new Intent(app, AlarmReceiver.class);
 		i.putExtra(EXTRA_PID, android.os.Process.myPid());
 		return PendingIntent.getBroadcast(app, REQUEST_ALARM, i,
-				FLAG_CANCEL_CURRENT);
+				getImmutableFlags(FLAG_CANCEL_CURRENT));
 	}
 
 	private class ScheduledTask
@@ -206,7 +211,7 @@ class AndroidTaskScheduler implements TaskScheduler, Service, AlarmListener {
 		private final Future<?> check;
 		private final AtomicBoolean cancelled;
 
-		public ScheduledTask(Runnable task, long dueMillis,
+		private ScheduledTask(Runnable task, long dueMillis,
 				Future<?> check, AtomicBoolean cancelled) {
 			this.task = task;
 			this.dueMillis = dueMillis;

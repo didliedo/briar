@@ -1,7 +1,7 @@
 package org.briarproject.briar.api.client;
 
 import org.briarproject.bramble.api.UniqueId;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -15,10 +15,5 @@ public class SessionId extends UniqueId {
 
 	public SessionId(byte[] id) {
 		super(id);
-	}
-
-	@Override
-	public boolean equals(Object o) {
-		return o instanceof SessionId && super.equals(o);
 	}
 }

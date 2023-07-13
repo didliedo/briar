@@ -6,12 +6,16 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
+import org.briarproject.briar.android.mailbox.MailboxActivity;
+import org.briarproject.briar.android.util.ActivityLaunchers.GetImageAdvanced;
+import org.briarproject.briar.android.util.ActivityLaunchers.OpenImageDocumentAdvanced;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import javax.inject.Inject;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.DialogFragment;
@@ -20,13 +24,14 @@ import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.PreferenceGroup;
 
-import static android.app.Activity.RESULT_OK;
+import static android.content.Intent.ACTION_SEND;
+import static android.content.Intent.EXTRA_TEXT;
 import static java.util.Objects.requireNonNull;
 import static org.briarproject.briar.android.AppModule.getAndroidComponent;
 import static org.briarproject.briar.android.TestingConstants.IS_DEBUG_BUILD;
-import static org.briarproject.briar.android.activity.RequestCodes.REQUEST_AVATAR_IMAGE;
-import static org.briarproject.briar.android.util.UiUtils.createSelectImageIntent;
+import static org.briarproject.briar.android.util.UiUtils.launchActivityToOpenFile;
 import static org.briarproject.briar.android.util.UiUtils.triggerFeedback;
+import static org.briarproject.briar.android.util.UiUtils.tryToStartActivity;
 
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
@@ -35,15 +40,26 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 	public static final String SETTINGS_NAMESPACE = "android-ui";
 
 	private static final String PREF_KEY_AVATAR = "pref_key_avatar";
+	private static final String PREF_KEY_SHARE_LINK = "pref_key_share_app_link";
 	private static final String PREF_KEY_FEEDBACK = "pref_key_send_feedback";
 	private static final String PREF_KEY_DEV = "pref_key_dev";
 	private static final String PREF_KEY_EXPLODE = "pref_key_explode";
+	private static final String PREF_KEY_MAILBOX = "pref_key_mailbox";
+
+	private static final String DOWNLOAD_URL = "https://briarproject.org/download/";
 
 	@Inject
 	ViewModelProvider.Factory viewModelFactory;
 
 	private SettingsViewModel viewModel;
 	private AvatarPreference prefAvatar;
+
+	private final ActivityResultLauncher<String[]> docLauncher =
+			registerForActivityResult(new OpenImageDocumentAdvanced(),
+					this::onImageSelected);
+	private final ActivityResultLauncher<String> contentLauncher =
+			registerForActivityResult(new GetImageAdvanced(),
+					this::onImageSelected);
 
 	@Override
 	public void onAttach(@NonNull Context context) {
@@ -60,14 +76,33 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 		prefAvatar = requireNonNull(findPreference(PREF_KEY_AVATAR));
 		if (viewModel.shouldEnableProfilePictures()) {
 			prefAvatar.setOnPreferenceClickListener(preference -> {
-				Intent intent = createSelectImageIntent(false);
-				startActivityForResult(intent, REQUEST_AVATAR_IMAGE);
+				launchActivityToOpenFile(requireContext(),
+						docLauncher, contentLauncher, "image/*");
 				return true;
 			});
 		} else {
 			prefAvatar.setVisible(false);
 		}
 
+		Preference prefMailbox =
+				requireNonNull(findPreference(PREF_KEY_MAILBOX));
+		prefMailbox.setOnPreferenceClickListener(preference -> {
+			Intent i = new Intent(requireContext(), MailboxActivity.class);
+			startActivity(i);
+			return true;
+		});
+
+		Preference prefShareLink =
+				requireNonNull(findPreference(PREF_KEY_SHARE_LINK));
+		prefShareLink.setOnPreferenceClickListener(preference -> {
+			String text = getString(R.string.share_app_link_text, DOWNLOAD_URL);
+			Intent sendIntent = new Intent(ACTION_SEND);
+			sendIntent.putExtra(EXTRA_TEXT, text);
+			sendIntent.setType("text/plain");
+			tryToStartActivity(requireActivity(),
+					Intent.createChooser(sendIntent, null));
+			return true;
+		});
 		Preference prefFeedback =
 				requireNonNull(findPreference(PREF_KEY_FEEDBACK));
 		prefFeedback.setOnPreferenceClickListener(preference -> {
@@ -102,20 +137,11 @@ public class SettingsFragment extends PreferenceFragmentCompat {
 		requireActivity().setTitle(R.string.settings_button);
 	}
 
-	@Override
-	public void onActivityResult(int request, int result,
-			@Nullable Intent data) {
-		super.onActivityResult(request, result, data);
-		if (request == REQUEST_AVATAR_IMAGE && result == RESULT_OK) {
-			if (data == null) return;
-			Uri uri = data.getData();
-			if (uri == null) return;
-
-			DialogFragment dialog =
-					ConfirmAvatarDialogFragment.newInstance(uri);
-			dialog.show(getParentFragmentManager(),
-					ConfirmAvatarDialogFragment.TAG);
-		}
+	private void onImageSelected(@Nullable Uri uri) {
+		if (uri == null) return;
+		DialogFragment dialog = ConfirmAvatarDialogFragment.newInstance(uri);
+		dialog.show(getParentFragmentManager(),
+				ConfirmAvatarDialogFragment.TAG);
 	}
 
 }

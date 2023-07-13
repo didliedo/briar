@@ -1,6 +1,6 @@
 package org.briarproject.bramble.api.plugin;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -15,12 +15,17 @@ public interface TransportConnectionWriter {
 	/**
 	 * Returns the maximum latency of the transport in milliseconds.
 	 */
-	int getMaxLatency();
+	long getMaxLatency();
 
 	/**
 	 * Returns the maximum idle time of the transport in milliseconds.
 	 */
 	int getMaxIdleTime();
+
+	/**
+	 * Returns true if the transport is lossy and cheap.
+	 */
+	boolean isLossyAndCheap();
 
 	/**
 	 * Returns an output stream for writing to the transport connection.

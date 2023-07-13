@@ -9,15 +9,18 @@ import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.identity.Author;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.bramble.api.mailbox.MailboxUpdate;
+import org.briarproject.bramble.api.mailbox.MailboxVersion;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageId;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.security.GeneralSecurityException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 @NotNullByDefault
@@ -45,6 +48,9 @@ public interface ClientHelper {
 
 	BdfList getMessageAsList(Transaction txn, MessageId m) throws DbException,
 			FormatException;
+
+	BdfList getMessageAsList(Transaction txn, MessageId m, boolean canonical)
+			throws DbException, FormatException;
 
 	BdfDictionary getGroupMetadataAsDictionary(GroupId g) throws DbException,
 			FormatException;
@@ -103,6 +109,8 @@ public interface ClientHelper {
 
 	BdfList toList(Message m) throws FormatException;
 
+	BdfList toList(Message m, boolean canonical) throws FormatException;
+
 	BdfList toList(Author a);
 
 	byte[] sign(String label, BdfList toSign, PrivateKey privateKey)
@@ -124,11 +132,24 @@ public interface ClientHelper {
 			BdfDictionary properties) throws FormatException;
 
 	/**
+	 * Parse and validate the elements of a Mailbox update message.
+	 *
+	 * @return the parsed update message
+	 * @throws FormatException if the message elements are invalid
+	 */
+	MailboxUpdate parseAndValidateMailboxUpdate(BdfList clientSupports,
+			BdfList serverSupports, BdfDictionary properties)
+			throws FormatException;
+
+	List<MailboxVersion> parseMailboxVersionList(BdfList bdfList)
+			throws FormatException;
+
+	/**
 	 * Retrieves the contact ID from the group metadata of the given contact
 	 * group.
 	 */
 	ContactId getContactId(Transaction txn, GroupId contactGroupId)
-			throws DbException, FormatException;
+			throws DbException;
 
 	/**
 	 * Stores the given contact ID in the group metadata of the given contact

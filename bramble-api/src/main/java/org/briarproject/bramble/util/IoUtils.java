@@ -1,6 +1,6 @@
 package org.briarproject.bramble.util;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.Closeable;
 import java.io.EOFException;
@@ -40,7 +40,7 @@ public class IoUtils {
 		}
 	}
 
-	private static void delete(File f) {
+	public static void delete(File f) {
 		if (!f.delete() && LOG.isLoggable(WARNING))
 			LOG.warning("Could not delete " + f.getAbsolutePath());
 	}

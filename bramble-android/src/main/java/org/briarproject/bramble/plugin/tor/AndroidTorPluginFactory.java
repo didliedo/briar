@@ -2,139 +2,99 @@ package org.briarproject.bramble.plugin.tor;
 
 import android.app.Application;
 
+import org.briarproject.android.dontkillmelib.wakelock.AndroidWakeLockManager;
 import org.briarproject.bramble.api.battery.BatteryManager;
+import org.briarproject.bramble.api.crypto.CryptoComponent;
 import org.briarproject.bramble.api.event.EventBus;
+import org.briarproject.bramble.api.event.EventExecutor;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
 import org.briarproject.bramble.api.network.NetworkManager;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.Backoff;
 import org.briarproject.bramble.api.plugin.BackoffFactory;
 import org.briarproject.bramble.api.plugin.PluginCallback;
-import org.briarproject.bramble.api.plugin.TorConstants;
+import org.briarproject.bramble.api.plugin.TorControlPort;
 import org.briarproject.bramble.api.plugin.TorDirectory;
-import org.briarproject.bramble.api.plugin.TransportId;
-import org.briarproject.bramble.api.plugin.duplex.DuplexPlugin;
-import org.briarproject.bramble.api.plugin.duplex.DuplexPluginFactory;
-import org.briarproject.bramble.api.system.AndroidWakeLockManager;
+import org.briarproject.bramble.api.plugin.TorSocksPort;
 import org.briarproject.bramble.api.system.Clock;
-import org.briarproject.bramble.api.system.LocationUtils;
-import org.briarproject.bramble.api.system.ResourceProvider;
 import org.briarproject.bramble.api.system.WakefulIoExecutor;
-import org.briarproject.bramble.util.AndroidUtils;
+import org.briarproject.nullsafety.NotNullByDefault;
+import org.briarproject.onionwrapper.AndroidTorWrapper;
+import org.briarproject.onionwrapper.CircumventionProvider;
+import org.briarproject.onionwrapper.LocationUtils;
+import org.briarproject.onionwrapper.TorWrapper;
 
 import java.io.File;
 import java.util.concurrent.Executor;
-import java.util.logging.Logger;
 
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 import javax.net.SocketFactory;
 
+import static android.os.Build.VERSION.SDK_INT;
+import static org.briarproject.bramble.util.AndroidUtils.getSupportedArchitectures;
+
 @Immutable
 @NotNullByDefault
-public class AndroidTorPluginFactory implements DuplexPluginFactory {
+public class AndroidTorPluginFactory extends TorPluginFactory {
 
-	private static final Logger LOG =
-			Logger.getLogger(AndroidTorPluginFactory.class.getName());
-
-	private static final int MAX_LATENCY = 30 * 1000; // 30 seconds
-	private static final int MAX_IDLE_TIME = 30 * 1000; // 30 seconds
-	private static final int MIN_POLLING_INTERVAL = 60 * 1000; // 1 minute
-	private static final int MAX_POLLING_INTERVAL = 10 * 60 * 1000; // 10 mins
-	private static final double BACKOFF_BASE = 1.2;
-
-	private final Executor ioExecutor, wakefulIoExecutor;
 	private final Application app;
-	private final NetworkManager networkManager;
-	private final LocationUtils locationUtils;
-	private final EventBus eventBus;
-	private final SocketFactory torSocketFactory;
-	private final BackoffFactory backoffFactory;
-	private final ResourceProvider resourceProvider;
-	private final CircumventionProvider circumventionProvider;
-	private final BatteryManager batteryManager;
 	private final AndroidWakeLockManager wakeLockManager;
-	private final Clock clock;
-	private final File torDirectory;
 
 	@Inject
-	public AndroidTorPluginFactory(@IoExecutor Executor ioExecutor,
+	AndroidTorPluginFactory(@IoExecutor Executor ioExecutor,
+			@EventExecutor Executor eventExecutor,
 			@WakefulIoExecutor Executor wakefulIoExecutor,
-			Application app,
 			NetworkManager networkManager,
 			LocationUtils locationUtils,
 			EventBus eventBus,
 			SocketFactory torSocketFactory,
 			BackoffFactory backoffFactory,
-			ResourceProvider resourceProvider,
 			CircumventionProvider circumventionProvider,
 			BatteryManager batteryManager,
-			AndroidWakeLockManager wakeLockManager,
 			Clock clock,
-			@TorDirectory File torDirectory) {
-		this.ioExecutor = ioExecutor;
-		this.wakefulIoExecutor = wakefulIoExecutor;
+			CryptoComponent crypto,
+			@TorDirectory File torDirectory,
+			@TorSocksPort int torSocksPort,
+			@TorControlPort int torControlPort,
+			Application app,
+			AndroidWakeLockManager wakeLockManager) {
+		super(ioExecutor, eventExecutor, wakefulIoExecutor, networkManager,
+				locationUtils, eventBus, torSocketFactory, backoffFactory,
+				circumventionProvider, batteryManager, clock, crypto,
+				torDirectory, torSocksPort, torControlPort);
 		this.app = app;
-		this.networkManager = networkManager;
-		this.locationUtils = locationUtils;
-		this.eventBus = eventBus;
-		this.torSocketFactory = torSocketFactory;
-		this.backoffFactory = backoffFactory;
-		this.resourceProvider = resourceProvider;
-		this.circumventionProvider = circumventionProvider;
-		this.batteryManager = batteryManager;
 		this.wakeLockManager = wakeLockManager;
-		this.clock = clock;
-		this.torDirectory = torDirectory;
 	}
 
+	@Nullable
 	@Override
-	public TransportId getId() {
-		return TorConstants.ID;
-	}
-
-	@Override
-	public int getMaxLatency() {
-		return MAX_LATENCY;
-	}
-
-	@Override
-	public DuplexPlugin createPlugin(PluginCallback callback) {
-
-		// Check that we have a Tor binary for this architecture
-		String architecture = null;
-		for (String abi : AndroidUtils.getSupportedArchitectures()) {
-			if (abi.startsWith("x86_64")) {
-				architecture = "x86_64";
-				break;
-			} else if (abi.startsWith("x86")) {
-				architecture = "x86";
-				break;
-			} else if (abi.startsWith("arm64")) {
-				architecture = "arm64";
-				break;
-			} else if (abi.startsWith("armeabi")) {
-				architecture = "arm";
-				break;
-			}
+	String getArchitectureForTorBinary() {
+		for (String abi : getSupportedArchitectures()) {
+			if (abi.startsWith("x86_64")) return "x86_64_pie";
+			else if (abi.startsWith("x86")) return "x86_pie";
+			else if (abi.startsWith("arm64")) return "arm64_pie";
+			else if (abi.startsWith("armeabi")) return "arm_pie";
 		}
-		if (architecture == null) {
-			LOG.info("Tor is not supported on this architecture");
-			return null;
-		}
-		// Use position-independent executable
-		architecture += "_pie";
+		return null;
+	}
 
-		Backoff backoff = backoffFactory.createBackoff(MIN_POLLING_INTERVAL,
-				MAX_POLLING_INTERVAL, BACKOFF_BASE);
-		TorRendezvousCrypto torRendezvousCrypto = new TorRendezvousCryptoImpl();
-		AndroidTorPlugin plugin = new AndroidTorPlugin(ioExecutor,
-				wakefulIoExecutor, app, networkManager, locationUtils,
-				torSocketFactory, clock, resourceProvider,
-				circumventionProvider, batteryManager, wakeLockManager,
-				backoff, torRendezvousCrypto, callback, architecture,
-				MAX_LATENCY, MAX_IDLE_TIME, torDirectory);
-		eventBus.addListener(plugin);
-		return plugin;
+	@Override
+	TorPlugin createPluginInstance(Backoff backoff,
+			TorRendezvousCrypto torRendezvousCrypto, PluginCallback callback,
+			String architecture) {
+		TorWrapper tor = new AndroidTorWrapper(app, wakeLockManager,
+				ioExecutor, eventExecutor, architecture, torDirectory,
+				torSocksPort, torControlPort);
+		// Android versions 7.1 and newer can verify Let's Encrypt TLS certs
+		// signed with the IdentTrust DST Root X3 certificate. Older versions
+		// of Android consider the certificate to have expired at the end of
+		// September 2021.
+		boolean canVerifyLetsEncryptCerts = SDK_INT >= 25;
+		return new TorPlugin(ioExecutor, wakefulIoExecutor,
+				networkManager, locationUtils, torSocketFactory,
+				circumventionProvider, batteryManager, backoff,
+				torRendezvousCrypto, tor, callback, MAX_LATENCY,
+				MAX_IDLE_TIME, canVerifyLetsEncryptCerts);
 	}
 }

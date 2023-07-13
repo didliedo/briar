@@ -14,13 +14,13 @@ import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.target.Target;
 import com.github.chrisbanes.photoview.PhotoView;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.activity.BaseActivity;
 import org.briarproject.briar.android.attachment.AttachmentItem;
 import org.briarproject.briar.android.conversation.glide.GlideApp;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
 
 import javax.annotation.ParametersAreNonnullByDefault;
 import javax.inject.Inject;
@@ -31,14 +31,13 @@ import androidx.fragment.app.Fragment;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ViewModelProvider;
 
-import static android.os.Build.VERSION.SDK_INT;
 import static android.widget.ImageView.ScaleType.FIT_START;
 import static com.bumptech.glide.load.engine.DiskCacheStrategy.NONE;
-import static org.briarproject.bramble.api.nullsafety.NullSafety.requireNonNull;
 import static org.briarproject.briar.android.attachment.AttachmentItem.State.AVAILABLE;
 import static org.briarproject.briar.android.attachment.AttachmentItem.State.ERROR;
 import static org.briarproject.briar.android.conversation.ImageActivity.ATTACHMENT_POSITION;
 import static org.briarproject.briar.android.conversation.ImageActivity.ITEM_ID;
+import static org.briarproject.nullsafety.NullSafety.requireNonNull;
 
 @MethodsNotNullByDefault
 @ParametersAreNonnullByDefault
@@ -150,7 +149,7 @@ public class ImageFragment extends Fragment
 	public boolean onResourceReady(Drawable resource, Object model,
 			Target<Drawable> target, DataSource dataSource,
 			boolean isFirstResource) {
-		if (SDK_INT >= 21 && !(resource instanceof Animatable)) {
+		if (!(resource instanceof Animatable)) {
 			// set transition name only when not animatable,
 			// because the animation won't start otherwise
 			photoView.setTransitionName(

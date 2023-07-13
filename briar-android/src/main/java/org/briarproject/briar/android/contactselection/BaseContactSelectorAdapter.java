@@ -3,16 +3,16 @@ package org.briarproject.briar.android.contactselection;
 import android.content.Context;
 
 import org.briarproject.bramble.api.contact.ContactId;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.briar.android.contact.BaseContactListAdapter;
 import org.briarproject.briar.android.contact.ContactItemViewHolder;
 import org.briarproject.briar.android.contact.OnContactClickListener;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
 
 @NotNullByDefault
-public abstract class BaseContactSelectorAdapter<I extends SelectableContactItem, H extends ContactItemViewHolder<I>>
+public abstract class BaseContactSelectorAdapter<I extends BaseSelectableContactItem, H extends ContactItemViewHolder<I>>
 		extends BaseContactListAdapter<I, H> {
 
 	public BaseContactSelectorAdapter(Context context, Class<I> c,
@@ -24,7 +24,7 @@ public abstract class BaseContactSelectorAdapter<I extends SelectableContactItem
 		Collection<ContactId> selected = new ArrayList<>();
 
 		for (int i = 0; i < items.size(); i++) {
-			SelectableContactItem item = items.get(i);
+			BaseSelectableContactItem item = items.get(i);
 			if (item.isSelected()) selected.add(item.getContact().getId());
 		}
 		return selected;

@@ -4,20 +4,22 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import dagger.Module
 import dagger.Provides
 import org.briarproject.bramble.account.AccountModule
-import org.briarproject.bramble.api.FeatureFlags
 import org.briarproject.bramble.api.db.DatabaseConfig
+import org.briarproject.bramble.api.mailbox.MailboxDirectory
 import org.briarproject.bramble.api.plugin.PluginConfig
+import org.briarproject.bramble.api.plugin.TorConstants.DEFAULT_CONTROL_PORT
+import org.briarproject.bramble.api.plugin.TorConstants.DEFAULT_SOCKS_PORT
+import org.briarproject.bramble.api.plugin.TorControlPort
+import org.briarproject.bramble.api.plugin.TorSocksPort
 import org.briarproject.bramble.api.plugin.TransportId
 import org.briarproject.bramble.api.plugin.duplex.DuplexPluginFactory
 import org.briarproject.bramble.api.plugin.simplex.SimplexPluginFactory
 import org.briarproject.bramble.event.DefaultEventExecutorModule
-import org.briarproject.bramble.network.JavaNetworkModule
-import org.briarproject.bramble.plugin.tor.CircumventionModule
-import org.briarproject.bramble.socks.SocksModule
 import org.briarproject.bramble.system.ClockModule
 import org.briarproject.bramble.system.DefaultTaskSchedulerModule
+import org.briarproject.bramble.system.DefaultThreadFactoryModule
 import org.briarproject.bramble.system.DefaultWakefulIoExecutorModule
-import org.briarproject.bramble.system.JavaSystemModule
+import org.briarproject.bramble.test.TestFeatureFlagModule
 import org.briarproject.bramble.test.TestSecureRandomModule
 import org.briarproject.briar.api.test.TestAvatarCreator
 import org.briarproject.briar.headless.blogs.HeadlessBlogModule
@@ -31,15 +33,13 @@ import javax.inject.Singleton
 
 @Module(
     includes = [
-        JavaNetworkModule::class,
-        JavaSystemModule::class,
         AccountModule::class,
-        CircumventionModule::class,
         ClockModule::class,
         DefaultEventExecutorModule::class,
         DefaultTaskSchedulerModule::class,
         DefaultWakefulIoExecutorModule::class,
-        SocksModule::class,
+        DefaultThreadFactoryModule::class,
+        TestFeatureFlagModule::class,
         TestSecureRandomModule::class,
         HeadlessBlogModule::class,
         HeadlessContactModule::class,
@@ -64,6 +64,21 @@ internal class HeadlessTestModule(private val appDir: File) {
     }
 
     @Provides
+    @MailboxDirectory
+    internal fun provideMailboxDirectory(): File {
+        return File(appDir, "mailbox")
+    }
+
+    @Provides
+    @TorSocksPort
+    internal fun provideTorSocksPort(): Int = DEFAULT_SOCKS_PORT
+
+    @Provides
+    @TorControlPort
+    internal fun provideTorControlPort(): Int = DEFAULT_CONTROL_PORT
+
+    @Provides
+    @Singleton
     internal fun providePluginConfig(): PluginConfig {
         return object : PluginConfig {
             override fun getDuplexFactories(): Collection<DuplexPluginFactory> = emptyList()
@@ -76,14 +91,6 @@ internal class HeadlessTestModule(private val appDir: File) {
     @Provides
     @Singleton
     internal fun provideObjectMapper() = ObjectMapper()
-
-    @Provides
-    internal fun provideFeatureFlags() = object : FeatureFlags {
-        override fun shouldEnableImageAttachments() = false
-        override fun shouldEnableProfilePictures() = false
-        override fun shouldEnableDisappearingMessages() = false
-        override fun shouldEnableConnectViaBluetooth() = false
-    }
 
     @Provides
     internal fun provideTestAvatarCreator() = TestAvatarCreator { null }

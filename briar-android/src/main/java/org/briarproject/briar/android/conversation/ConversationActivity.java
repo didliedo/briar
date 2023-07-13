@@ -4,6 +4,7 @@ import android.annotation.SuppressLint;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Parcelable;
 import android.transition.Slide;
@@ -21,6 +22,7 @@ import android.widget.Toast;
 import com.google.android.material.snackbar.Snackbar;
 
 import org.briarproject.bramble.api.FeatureFlags;
+import org.briarproject.bramble.api.FormatException;
 import org.briarproject.bramble.api.Pair;
 import org.briarproject.bramble.api.connection.ConnectionRegistry;
 import org.briarproject.bramble.api.contact.ContactId;
@@ -32,9 +34,6 @@ import org.briarproject.bramble.api.db.NoSuchContactException;
 import org.briarproject.bramble.api.event.Event;
 import org.briarproject.bramble.api.event.EventBus;
 import org.briarproject.bramble.api.event.EventListener;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
-import org.briarproject.bramble.api.plugin.BluetoothConstants;
 import org.briarproject.bramble.api.plugin.event.ContactConnectedEvent;
 import org.briarproject.bramble.api.plugin.event.ContactDisconnectedEvent;
 import org.briarproject.bramble.api.sync.ClientId;
@@ -48,12 +47,16 @@ import org.briarproject.briar.android.activity.BriarActivity;
 import org.briarproject.briar.android.attachment.AttachmentItem;
 import org.briarproject.briar.android.attachment.AttachmentRetriever;
 import org.briarproject.briar.android.blog.BlogActivity;
+import org.briarproject.briar.android.contact.connect.ConnectViaBluetoothActivity;
 import org.briarproject.briar.android.conversation.ConversationVisitor.AttachmentCache;
 import org.briarproject.briar.android.conversation.ConversationVisitor.TextCache;
 import org.briarproject.briar.android.forum.ForumActivity;
 import org.briarproject.briar.android.fragment.BaseFragment.BaseFragmentListener;
 import org.briarproject.briar.android.introduction.IntroductionActivity;
 import org.briarproject.briar.android.privategroup.conversation.GroupActivity;
+import org.briarproject.briar.android.removabledrive.RemovableDriveActivity;
+import org.briarproject.briar.android.util.ActivityLaunchers.GetMultipleImagesAdvanced;
+import org.briarproject.briar.android.util.ActivityLaunchers.OpenMultipleImageDocumentsAdvanced;
 import org.briarproject.briar.android.util.BriarSnackbarBuilder;
 import org.briarproject.briar.android.view.BriarRecyclerView;
 import org.briarproject.briar.android.view.ImagePreview;
@@ -62,6 +65,7 @@ import org.briarproject.briar.android.view.TextAttachmentController.AttachmentLi
 import org.briarproject.briar.android.view.TextInputView;
 import org.briarproject.briar.android.view.TextSendController;
 import org.briarproject.briar.android.view.TextSendController.SendState;
+import org.briarproject.briar.android.widget.LinkDialogFragment;
 import org.briarproject.briar.api.android.AndroidNotificationManager;
 import org.briarproject.briar.api.attachment.AttachmentHeader;
 import org.briarproject.briar.api.autodelete.event.ConversationMessagesDeletedEvent;
@@ -80,6 +84,8 @@ import org.briarproject.briar.api.introduction.IntroductionManager;
 import org.briarproject.briar.api.messaging.MessagingManager;
 import org.briarproject.briar.api.messaging.PrivateMessageHeader;
 import org.briarproject.briar.api.privategroup.invitation.GroupInvitationManager;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -92,6 +98,7 @@ import java.util.logging.Logger;
 
 import javax.inject.Inject;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 import androidx.appcompat.app.AlertDialog;
@@ -100,7 +107,6 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.app.ActivityCompat;
 import androidx.core.app.ActivityOptionsCompat;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProvider;
@@ -115,7 +121,6 @@ import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat;
 import de.hdodenhof.circleimageview.CircleImageView;
 import uk.co.samuelwall.materialtaptargetprompt.MaterialTapTargetPrompt;
 
-import static android.os.Build.VERSION.SDK_INT;
 import static android.view.Gravity.RIGHT;
 import static android.widget.Toast.LENGTH_SHORT;
 import static androidx.core.app.ActivityOptionsCompat.makeSceneTransitionAnimation;
@@ -132,13 +137,13 @@ import static org.briarproject.bramble.util.LogUtils.now;
 import static org.briarproject.bramble.util.StringUtils.fromHexString;
 import static org.briarproject.bramble.util.StringUtils.isNullOrEmpty;
 import static org.briarproject.bramble.util.StringUtils.join;
-import static org.briarproject.briar.android.activity.RequestCodes.REQUEST_ATTACH_IMAGE;
 import static org.briarproject.briar.android.activity.RequestCodes.REQUEST_INTRODUCTION;
 import static org.briarproject.briar.android.conversation.ImageActivity.ATTACHMENTS;
 import static org.briarproject.briar.android.conversation.ImageActivity.ATTACHMENT_POSITION;
 import static org.briarproject.briar.android.conversation.ImageActivity.DATE;
 import static org.briarproject.briar.android.conversation.ImageActivity.ITEM_ID;
 import static org.briarproject.briar.android.conversation.ImageActivity.NAME;
+import static org.briarproject.briar.android.util.UiUtils.launchActivityToOpenFile;
 import static org.briarproject.briar.android.util.UiUtils.observeOnce;
 import static org.briarproject.briar.android.view.AuthorView.setAvatar;
 import static org.briarproject.briar.api.messaging.MessagingConstants.MAX_ATTACHMENTS_PER_MESSAGE;
@@ -193,6 +198,13 @@ public class ConversationActivity extends BriarActivity
 		loadMessages();
 	};
 
+	private final ActivityResultLauncher<String[]> docLauncher =
+			registerForActivityResult(new OpenMultipleImageDocumentsAdvanced(),
+					this::onImagesChosen);
+	private final ActivityResultLauncher<String> contentLauncher =
+			registerForActivityResult(new GetMultipleImagesAdvanced(),
+					this::onImagesChosen);
+
 	private AttachmentRetriever attachmentRetriever;
 	private ConversationViewModel viewModel;
 	private ConversationVisitor visitor;
@@ -222,13 +234,11 @@ public class ConversationActivity extends BriarActivity
 
 	@Override
 	public void onCreate(@Nullable Bundle state) {
-		if (SDK_INT >= 21) {
-			// Spurious lint warning - using END causes a crash
-			@SuppressLint("RtlHardcoded")
-			Transition slide = new Slide(RIGHT);
-			slide.setDuration(TRANSITION_DURATION_MS);
-			setSceneTransitionAnimation(slide, null, slide);
-		}
+		// Spurious lint warning - using END causes a crash
+		@SuppressLint("RtlHardcoded")
+		Transition slide = new Slide(RIGHT);
+		slide.setDuration(TRANSITION_DURATION_MS);
+		setSceneTransitionAnimation(slide, null, slide);
 		super.onCreate(state);
 
 		Intent i = getIntent();
@@ -314,9 +324,6 @@ public class ConversationActivity extends BriarActivity
 					.make(list, R.string.introduction_sent,
 							Snackbar.LENGTH_SHORT)
 					.show();
-		} else if (request == REQUEST_ATTACH_IMAGE && result == RESULT_OK) {
-			// TODO: remove cast when removing feature flag
-			((TextAttachmentController) sendController).onImageReceived(data);
 		}
 	}
 
@@ -372,9 +379,6 @@ public class ConversationActivity extends BriarActivity
 						this::showIntroductionOnboarding);
 			}
 		});
-		if (!featureFlags.shouldEnableConnectViaBluetooth()) {
-			menu.findItem(R.id.action_connect_via_bluetooth).setVisible(false);
-		}
 		// enable alias and bluetooth action once available
 		observeOnce(viewModel.getContactItem(), this, contact -> {
 			menu.findItem(R.id.action_set_alias).setEnabled(true);
@@ -411,9 +415,14 @@ public class ConversationActivity extends BriarActivity
 			onAutoDeleteTimerNoticeClicked();
 			return true;
 		} else if (itemId == R.id.action_connect_via_bluetooth) {
-			FragmentManager fm = getSupportFragmentManager();
-			new BluetoothConnecterDialogFragment().show(fm,
-					BluetoothConnecterDialogFragment.TAG);
+			Intent intent = new Intent(this, ConnectViaBluetoothActivity.class);
+			intent.putExtra(CONTACT_ID, contactId.getInt());
+			startActivity(intent);
+			return true;
+		} else if (itemId == R.id.action_transfer_data) {
+			Intent intent = new Intent(this, RemovableDriveActivity.class);
+			intent.putExtra(CONTACT_ID, contactId.getInt());
+			startActivity(intent);
 			return true;
 		} else if (itemId == R.id.action_delete_all_messages) {
 			askToDeleteAllMessages();
@@ -450,6 +459,12 @@ public class ConversationActivity extends BriarActivity
 	public void onDestroyActionMode(ActionMode mode) {
 		tracker.clearSelection();
 		actionMode = null;
+	}
+
+	@Override
+	public void onLinkClick(String url) {
+		LinkDialogFragment f = LinkDialogFragment.newInstance(url);
+		f.show(getSupportFragmentManager(), f.getUniqueTag());
 	}
 
 	private void addSelectionTracker() {
@@ -496,8 +511,12 @@ public class ConversationActivity extends BriarActivity
 		Selection<String> selection = tracker.getSelection();
 		List<MessageId> messages = new ArrayList<>(selection.size());
 		for (String str : selection) {
-			MessageId id = new MessageId(fromHexString(str));
-			messages.add(id);
+			try {
+				MessageId id = new MessageId(fromHexString(str));
+				messages.add(id);
+			} catch (FormatException e) {
+				LOG.warning("Invalid message id");
+			}
 		}
 		return messages;
 	}
@@ -760,8 +779,13 @@ public class ConversationActivity extends BriarActivity
 	}
 
 	@Override
-	public void onAttachImage(Intent intent) {
-		startActivityForResult(intent, REQUEST_ATTACH_IMAGE);
+	public void onAttachImageClicked() {
+		launchActivityToOpenFile(this, docLauncher, contentLauncher, "image/*");
+	}
+
+	private void onImagesChosen(@Nullable List<Uri> uris) {
+		// TODO: remove cast when removing feature flag
+		((TextAttachmentController) sendController).onImageReceived(uris);
 	}
 
 	@Override
@@ -892,6 +916,7 @@ public class ConversationActivity extends BriarActivity
 	}
 
 	private void removeContact() {
+		list.showProgressBar();
 		runOnDbThread(() -> {
 			try {
 				contactManager.removeContact(contactId);
@@ -914,14 +939,10 @@ public class ConversationActivity extends BriarActivity
 
 	private void showImageOnboarding(Boolean show) {
 		if (!show) return;
-		if (SDK_INT >= 21) {
-			// show onboarding only after the enter transition has ended
-			// otherwise the tap target animation won't play
-			textInputView.postDelayed(this::showImageOnboarding,
-					TRANSITION_DURATION_MS + ONBOARDING_DELAY_MS);
-		} else {
-			showImageOnboarding();
-		}
+		// show onboarding only after the enter transition has ended
+		// otherwise the tap target animation won't play
+		textInputView.postDelayed(this::showImageOnboarding,
+				TRANSITION_DURATION_MS + ONBOARDING_DELAY_MS);
 	}
 
 	private void showImageOnboarding() {
@@ -932,14 +953,10 @@ public class ConversationActivity extends BriarActivity
 
 	private void showIntroductionOnboarding(@Nullable Boolean show) {
 		if (show == null || !show) return;
-		if (SDK_INT >= 21) {
-			// show onboarding only after the enter transition has ended
-			// otherwise the tap target animation won't play
-			textInputView.postDelayed(this::showIntroductionOnboarding,
-					TRANSITION_DURATION_MS + ONBOARDING_DELAY_MS);
-		} else {
-			showIntroductionOnboarding();
-		}
+		// show onboarding only after the enter transition has ended
+		// otherwise the tap target animation won't play
+		textInputView.postDelayed(this::showIntroductionOnboarding,
+				TRANSITION_DURATION_MS + ONBOARDING_DELAY_MS);
 	}
 
 	private void showIntroductionOnboarding() {

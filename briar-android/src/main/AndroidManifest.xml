@@ -18,8 +18,11 @@
 
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-	<uses-permission android:name="android.permission.BLUETOOTH" />
-	<uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+	<uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+	<uses-permission
+		android:name="android.permission.NEARBY_WIFI_DEVICES"
+		android:usesPermissionFlags="neverForLocation"
+		tools:targetApi="31" />
 	<uses-permission android:name="android.permission.CAMERA" />
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -31,8 +34,10 @@
 		android:name="android.permission.WRITE_EXTERNAL_STORAGE"
 		android:maxSdkVersion="18"
 		tools:ignore="ScopedStorage" />
+	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-	<uses-permission-sdk-23 android:name="android.permission.ACCESS_FINE_LOCATION" />
+	<uses-permission-sdk-23 android:name="android.permission.ACCESS_FINE_LOCATION"
+		android:maxSdkVersion="32" />
 	<uses-permission-sdk-23 android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 	<uses-permission-sdk-23 android:name="android.permission.USE_BIOMETRIC" />
 	<uses-permission-sdk-23 android:name="android.permission.FOREGROUND_SERVICE" />
@@ -41,14 +46,15 @@
 		android:name="org.briarproject.briar.android.BriarApplicationImpl"
 		android:allowBackup="false"
 		android:banner="@mipmap/tv_banner"
+		android:dataExtractionRules="@xml/backup_extraction_rules"
 		android:fullBackupContent="@xml/backup_rules"
 		android:icon="@mipmap/ic_launcher_round"
 		android:label="@string/app_name"
 		android:logo="@mipmap/ic_launcher_round"
+		android:networkSecurityConfig="@xml/network_security_config"
 		android:supportsRtl="true"
 		android:theme="@style/BriarTheme"
-		tools:ignore="GoogleAppIndexingWarning,UnusedAttribute"
-		tools:targetApi="16">
+		tools:ignore="GoogleAppIndexingWarning,UnusedAttribute">
 
 		<receiver
 			android:name="org.briarproject.briar.android.login.SignInReminderReceiver"
@@ -96,18 +102,22 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.splash.ExpiredActivity"
+			android:exported="false"
 			android:label="@string/app_name" />
 
 		<activity
 			android:name="org.briarproject.briar.android.login.StartupActivity"
+			android:exported="false"
 			android:label="@string/app_name" />
 
 		<activity
 			android:name="org.briarproject.briar.android.account.SetupActivity"
+			android:exported="false"
 			android:label="@string/setup_title" />
 
 		<activity
 			android:name="org.briarproject.briar.android.splash.SplashScreenActivity"
+			android:exported="true"
 			android:label="@string/app_name"
 			android:theme="@style/BriarTheme.NoActionBar">
 			<intent-filter>
@@ -120,6 +130,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.navdrawer.NavDrawerActivity"
+			android:exported="true"
 			android:launchMode="singleTask"
 			android:theme="@style/BriarTheme.NoActionBar">
 			<intent-filter android:label="@string/add_contact_remotely_title_case">
@@ -139,6 +150,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.conversation.ConversationActivity"
+			android:exported="false"
 			android:label="@string/app_name"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity"
 			android:theme="@style/BriarTheme.NoActionBar"
@@ -150,6 +162,7 @@
 
 		<activity
 			android:name=".android.conversation.ImageActivity"
+			android:exported="false"
 			android:parentActivityName="org.briarproject.briar.android.conversation.ConversationActivity"
 			android:theme="@style/BriarTheme.ActionBarOverlay">
 			<meta-data
@@ -159,6 +172,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.privategroup.creation.CreateGroupActivity"
+			android:exported="false"
 			android:label="@string/groups_create_group_title"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity"
 			android:windowSoftInputMode="adjustResize|stateAlwaysVisible">
@@ -169,6 +183,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.privategroup.conversation.GroupActivity"
+			android:exported="false"
 			android:label="@string/app_name"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity"
 			android:theme="@style/BriarTheme.NoActionBar"
@@ -180,6 +195,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.privategroup.invitation.GroupInvitationActivity"
+			android:exported="false"
 			android:label="@string/groups_invitations_title"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity">
 			<meta-data
@@ -189,6 +205,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.privategroup.memberlist.GroupMemberListActivity"
+			android:exported="false"
 			android:label="@string/groups_member_list"
 			android:parentActivityName="org.briarproject.briar.android.privategroup.conversation.GroupActivity">
 			<meta-data
@@ -198,6 +215,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.privategroup.reveal.RevealContactsActivity"
+			android:exported="false"
 			android:label="@string/groups_reveal_contacts"
 			android:parentActivityName="org.briarproject.briar.android.privategroup.conversation.GroupActivity">
 			<meta-data
@@ -207,6 +225,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.privategroup.creation.GroupInviteActivity"
+			android:exported="false"
 			android:label="@string/groups_invite_members"
 			android:parentActivityName="org.briarproject.briar.android.privategroup.conversation.GroupActivity"
 			android:windowSoftInputMode="adjustResize|stateHidden">
@@ -217,6 +236,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.sharing.ForumInvitationActivity"
+			android:exported="false"
 			android:label="@string/forum_invitations_title"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity">
 			<meta-data
@@ -226,6 +246,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.sharing.BlogInvitationActivity"
+			android:exported="false"
 			android:label="@string/blogs_sharing_invitations_title"
 			android:parentActivityName="org.briarproject.briar.android.conversation.ConversationActivity">
 			<meta-data
@@ -235,6 +256,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.forum.CreateForumActivity"
+			android:exported="false"
 			android:label="@string/create_forum_title"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity"
 			android:windowSoftInputMode="adjustResize|stateAlwaysVisible">
@@ -245,6 +267,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.forum.ForumActivity"
+			android:exported="false"
 			android:label="@string/app_name"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity"
 			android:theme="@style/BriarTheme.NoActionBar"
@@ -256,6 +279,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.sharing.ShareForumActivity"
+			android:exported="false"
 			android:label="@string/activity_share_toolbar_header"
 			android:parentActivityName="org.briarproject.briar.android.forum.ForumActivity"
 			android:windowSoftInputMode="adjustResize|stateHidden">
@@ -266,6 +290,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.sharing.ShareBlogActivity"
+			android:exported="false"
 			android:label="@string/activity_share_toolbar_header"
 			android:parentActivityName="org.briarproject.briar.android.blog.BlogActivity"
 			android:windowSoftInputMode="adjustResize|stateHidden">
@@ -276,6 +301,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.sharing.ForumSharingStatusActivity"
+			android:exported="false"
 			android:label="@string/sharing_status"
 			android:parentActivityName="org.briarproject.briar.android.forum.ForumActivity">
 			<meta-data
@@ -285,6 +311,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.sharing.BlogSharingStatusActivity"
+			android:exported="false"
 			android:label="@string/sharing_status"
 			android:parentActivityName="org.briarproject.briar.android.blog.BlogActivity">
 			<meta-data
@@ -294,6 +321,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.blog.BlogActivity"
+			android:exported="false"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity"
 			android:theme="@style/BriarTheme.NoActionBar">
 			<meta-data
@@ -303,6 +331,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.blog.WriteBlogPostActivity"
+			android:exported="false"
 			android:label="@string/blogs_write_blog_post"
 			android:parentActivityName="org.briarproject.briar.android.blog.BlogActivity"
 			android:windowSoftInputMode="adjustResize|stateAlwaysVisible">
@@ -313,6 +342,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.blog.ReblogActivity"
+			android:exported="false"
 			android:label="@string/blogs_reblog_button"
 			android:parentActivityName="org.briarproject.briar.android.blog.BlogActivity"
 			android:windowSoftInputMode="adjustResize|stateHidden">
@@ -323,6 +353,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.contact.add.nearby.AddNearbyContactActivity"
+			android:exported="false"
 			android:label="@string/add_contact_title"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity"
 			android:theme="@style/BriarTheme.NoActionBar">
@@ -333,6 +364,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.introduction.IntroductionActivity"
+			android:exported="false"
 			android:label="@string/introduction_activity_title"
 			android:parentActivityName="org.briarproject.briar.android.conversation.ConversationActivity"
 			android:windowSoftInputMode="adjustResize|stateHidden">
@@ -343,10 +375,17 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.StartupFailureActivity"
-			android:label="@string/startup_failed_activity_title" />
+			android:excludeFromRecents="true"
+			android:exported="false"
+			android:finishOnTaskLaunch="true"
+			android:label="@string/startup_failed_activity_title"
+			android:launchMode="singleInstance"
+			android:process=":briar_startup_failure"
+			android:windowSoftInputMode="adjustResize|stateHidden" />
 
 		<activity
 			android:name="org.briarproject.briar.android.settings.SettingsActivity"
+			android:exported="false"
 			android:label="@string/settings_button"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity"
 			android:permission="android.permission.READ_NETWORK_USAGE_HISTORY">
@@ -361,6 +400,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.navdrawer.TransportsActivity"
+			android:exported="false"
 			android:label="@string/network_settings_title"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity">
 			<meta-data
@@ -370,6 +410,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.login.ChangePasswordActivity"
+			android:exported="false"
 			android:label="@string/change_password"
 			android:parentActivityName="org.briarproject.briar.android.settings.SettingsActivity"
 			android:windowSoftInputMode="adjustResize|stateAlwaysVisible">
@@ -380,6 +421,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.test.TestDataActivity"
+			android:exported="false"
 			android:label="Create test data"
 			android:parentActivityName="org.briarproject.briar.android.settings.SettingsActivity">
 			<meta-data
@@ -389,6 +431,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.panic.PanicPreferencesActivity"
+			android:exported="false"
 			android:label="@string/panic_setting"
 			android:parentActivityName="org.briarproject.briar.android.settings.SettingsActivity">
 			<meta-data
@@ -398,6 +441,7 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.panic.PanicResponderActivity"
+			android:exported="true"
 			android:noHistory="true"
 			android:theme="@style/TranslucentTheme">
 			<!-- this can never have launchMode singleTask or singleInstance! -->
@@ -409,26 +453,31 @@
 
 		<activity
 			android:name="org.briarproject.briar.android.logout.ExitActivity"
+			android:exported="false"
 			android:theme="@android:style/Theme.NoDisplay" />
 
 		<activity
 			android:name=".android.logout.HideUiActivity"
+			android:exported="false"
 			android:theme="@android:style/Theme.NoDisplay" />
 
 		<activity
 			android:name=".android.account.UnlockActivity"
+			android:exported="false"
 			android:label="@string/lock_unlock"
 			android:launchMode="singleTask"
 			android:theme="@style/BriarTheme.NoActionBar" />
 
 		<activity
 			android:name=".android.contact.add.remote.AddContactActivity"
+			android:exported="false"
 			android:label="@string/add_contact_remotely_title_case"
 			android:theme="@style/BriarTheme"
 			android:windowSoftInputMode="adjustResize|stateHidden" />
 
 		<activity
 			android:name="org.briarproject.briar.android.blog.RssFeedActivity"
+			android:exported="false"
 			android:label="@string/blogs_rss_feeds"
 			android:parentActivityName="org.briarproject.briar.android.navdrawer.NavDrawerActivity">
 			<meta-data
@@ -437,17 +486,53 @@
 		</activity>
 
 		<activity
+			android:name="org.briarproject.briar.android.removabledrive.RemovableDriveActivity"
+			android:exported="false"
+			android:label="@string/removable_drive_menu_title"
+			android:parentActivityName="org.briarproject.briar.android.conversation.ConversationActivity">
+			<meta-data
+				android:name="android.support.PARENT_ACTIVITY"
+				android:value="org.briarproject.briar.android.conversation.ConversationActivity" />
+		</activity>
+
+		<activity
 			android:name=".android.contact.add.remote.PendingContactListActivity"
+			android:exported="false"
 			android:label="@string/pending_contact_requests"
 			android:theme="@style/BriarTheme" />
+
+		<activity
+			android:name=".android.hotspot.HotspotActivity"
+			android:exported="false"
+			android:label="@string/hotspot_title"
+			android:theme="@style/BriarTheme" />
+
+		<activity
+			android:name=".android.contact.connect.ConnectViaBluetoothActivity"
+			android:exported="false"
+			android:label="@string/connect_via_bluetooth_title"
+			android:parentActivityName="org.briarproject.briar.android.conversation.ConversationActivity"
+			android:theme="@style/BriarTheme">
+			<meta-data
+				android:name="android.support.PARENT_ACTIVITY"
+				android:value="org.briarproject.briar.android.conversation.ConversationActivity" />
+		</activity>
+
+		<activity
+			android:name=".android.mailbox.MailboxActivity"
+			android:exported="false"
+			android:label="@string/mailbox_settings_title"
+			android:parentActivityName="org.briarproject.briar.android.settings.SettingsActivity"
+			android:theme="@style/BriarTheme">
+			<meta-data
+				android:name="android.support.PARENT_ACTIVITY"
+				android:value="org.briarproject.briar.android.settings.SettingsActivity" />
+		</activity>
 
 	</application>
 
 	<queries>
 		<package android:name="info.guardianproject.ripple" />
-		<package android:name="com.huawei.systemmanager" />
-		<package android:name="com.huawei.powergenie" />
-		<package android:name="com.evenwell.PowerMonitor" />
 
 		<intent>
 			<action android:name="android.intent.action.VIEW" />

@@ -7,7 +7,6 @@ import org.briarproject.bramble.api.data.BdfReader;
 import org.briarproject.bramble.api.data.BdfReaderFactory;
 import org.briarproject.bramble.api.data.MetadataEncoder;
 import org.briarproject.bramble.api.db.Metadata;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.InvalidMessageException;
 import org.briarproject.bramble.api.sync.Message;
@@ -15,6 +14,7 @@ import org.briarproject.bramble.api.sync.MessageContext;
 import org.briarproject.bramble.api.sync.validation.MessageValidator;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.briar.attachment.CountingInputStream;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -76,7 +76,7 @@ class AvatarValidator implements MessageValidator {
 		// 0.0: Message Type, Version, Content-Type
 		checkSize(body, 3);
 		// Message Type
-		long messageType = body.getLong(0);
+		int messageType = body.getInt(0);
 		if (messageType != MSG_TYPE_UPDATE) throw new FormatException();
 		// Version
 		long version = body.getLong(1);

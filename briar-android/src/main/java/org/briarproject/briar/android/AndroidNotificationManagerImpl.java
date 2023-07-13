@@ -18,8 +18,9 @@ import org.briarproject.bramble.api.event.Event;
 import org.briarproject.bramble.api.event.EventListener;
 import org.briarproject.bramble.api.lifecycle.Service;
 import org.briarproject.bramble.api.lifecycle.ServiceException;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
+import org.briarproject.bramble.api.mailbox.MailboxStatus;
+import org.briarproject.bramble.api.mailbox.event.MailboxProblemEvent;
+import org.briarproject.bramble.api.mailbox.event.OwnMailboxConnectionStatusEvent;
 import org.briarproject.bramble.api.settings.Settings;
 import org.briarproject.bramble.api.settings.SettingsManager;
 import org.briarproject.bramble.api.settings.event.SettingsUpdatedEvent;
@@ -30,7 +31,9 @@ import org.briarproject.bramble.util.StringUtils;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.conversation.ConversationActivity;
 import org.briarproject.briar.android.forum.ForumActivity;
+import org.briarproject.briar.android.hotspot.HotspotActivity;
 import org.briarproject.briar.android.login.SignInReminderReceiver;
+import org.briarproject.briar.android.mailbox.MailboxActivity;
 import org.briarproject.briar.android.navdrawer.NavDrawerActivity;
 import org.briarproject.briar.android.privategroup.conversation.GroupActivity;
 import org.briarproject.briar.android.splash.SplashScreenActivity;
@@ -41,6 +44,8 @@ import org.briarproject.briar.api.conversation.ConversationResponse;
 import org.briarproject.briar.api.conversation.event.ConversationMessageReceivedEvent;
 import org.briarproject.briar.api.forum.event.ForumPostReceivedEvent;
 import org.briarproject.briar.api.privategroup.event.GroupMessageAddedEvent;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -63,17 +68,23 @@ import static android.app.Notification.DEFAULT_SOUND;
 import static android.app.Notification.DEFAULT_VIBRATE;
 import static android.app.NotificationManager.IMPORTANCE_DEFAULT;
 import static android.app.NotificationManager.IMPORTANCE_LOW;
+import static android.app.PendingIntent.getActivity;
+import static android.app.PendingIntent.getBroadcast;
 import static android.content.Context.NOTIFICATION_SERVICE;
 import static android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP;
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
+import static android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP;
+import static android.net.Uri.EMPTY;
 import static android.os.Build.VERSION.SDK_INT;
 import static androidx.core.app.NotificationCompat.CATEGORY_MESSAGE;
 import static androidx.core.app.NotificationCompat.CATEGORY_SERVICE;
 import static androidx.core.app.NotificationCompat.CATEGORY_SOCIAL;
+import static androidx.core.app.NotificationCompat.PRIORITY_HIGH;
 import static androidx.core.app.NotificationCompat.PRIORITY_LOW;
 import static androidx.core.app.NotificationCompat.PRIORITY_MIN;
 import static androidx.core.app.NotificationCompat.VISIBILITY_SECRET;
 import static androidx.core.content.ContextCompat.getColor;
+import static org.briarproject.bramble.util.AndroidUtils.getImmutableFlags;
 import static org.briarproject.briar.android.activity.BriarActivity.GROUP_ID;
 import static org.briarproject.briar.android.conversation.ConversationActivity.CONTACT_ID;
 import static org.briarproject.briar.android.navdrawer.NavDrawerActivity.BLOG_URI;
@@ -179,6 +190,7 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 			clearForumPostNotification();
 			clearBlogPostNotification();
 			clearContactAddedNotification();
+			clearMailboxProblemNotification();
 			return null;
 		});
 		try {
@@ -247,6 +259,13 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 			ContactAddedEvent c = (ContactAddedEvent) e;
 			// Don't show notifications for contacts added in person
 			if (!c.isVerified()) showContactAddedNotification();
+		} else if (e instanceof MailboxProblemEvent) {
+			showMailboxProblemNotification();
+		} else if (e instanceof OwnMailboxConnectionStatusEvent) {
+			MailboxStatus s = ((OwnMailboxConnectionStatusEvent) e).getStatus();
+			if (s.getAttemptsSinceSuccess() == 0) {
+				clearMailboxProblemNotification();
+			}
 		}
 	}
 
@@ -274,11 +293,9 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 		b.setWhen(0); // Don't show the time
 		b.setOngoing(true);
 		Intent i = new Intent(appContext, SplashScreenActivity.class);
-		b.setContentIntent(PendingIntent.getActivity(appContext, 0, i, 0));
-		if (SDK_INT >= 21) {
-			b.setCategory(CATEGORY_SERVICE);
-			b.setVisibility(VISIBILITY_SECRET);
-		}
+		b.setContentIntent(getActivity(appContext, 0, i, getImmutableFlags(0)));
+		b.setCategory(CATEGORY_SERVICE);
+		b.setVisibility(VISIBILITY_SECRET);
 		b.setPriority(PRIORITY_MIN);
 		return b.build();
 	}
@@ -334,7 +351,8 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 				TaskStackBuilder t = TaskStackBuilder.create(appContext);
 				t.addParentStack(ConversationActivity.class);
 				t.addNextIntent(i);
-				b.setContentIntent(t.getPendingIntent(nextRequestId++, 0));
+				b.setContentIntent(t.getPendingIntent(nextRequestId++,
+						getImmutableFlags(0)));
 			} else {
 				// Touching the notification shows the contact list
 				Intent i = new Intent(appContext, NavDrawerActivity.class);
@@ -343,7 +361,8 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 				TaskStackBuilder t = TaskStackBuilder.create(appContext);
 				t.addParentStack(NavDrawerActivity.class);
 				t.addNextIntent(i);
-				b.setContentIntent(t.getPendingIntent(nextRequestId++, 0));
+				b.setContentIntent(t.getPendingIntent(nextRequestId++,
+						getImmutableFlags(0)));
 			}
 			notificationManager.notify(PRIVATE_MESSAGE_NOTIFICATION_ID,
 					b.build());
@@ -382,7 +401,7 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 		Intent i = new Intent(appContext, NotificationCleanupService.class);
 		i.setData(uri);
 		b.setDeleteIntent(PendingIntent.getService(appContext, nextRequestId++,
-				i, 0));
+				i, getImmutableFlags(0)));
 	}
 
 	@Override
@@ -437,7 +456,8 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 				TaskStackBuilder t = TaskStackBuilder.create(appContext);
 				t.addParentStack(GroupActivity.class);
 				t.addNextIntent(i);
-				b.setContentIntent(t.getPendingIntent(nextRequestId++, 0));
+				b.setContentIntent(t.getPendingIntent(nextRequestId++,
+						getImmutableFlags(0)));
 			} else {
 				// Touching the notification shows the group list
 				Intent i = new Intent(appContext, NavDrawerActivity.class);
@@ -446,7 +466,8 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 				TaskStackBuilder t = TaskStackBuilder.create(appContext);
 				t.addParentStack(NavDrawerActivity.class);
 				t.addNextIntent(i);
-				b.setContentIntent(t.getPendingIntent(nextRequestId++, 0));
+				b.setContentIntent(t.getPendingIntent(nextRequestId++,
+						getImmutableFlags(0)));
 			}
 			notificationManager.notify(GROUP_MESSAGE_NOTIFICATION_ID,
 					b.build());
@@ -505,7 +526,8 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 				TaskStackBuilder t = TaskStackBuilder.create(appContext);
 				t.addParentStack(ForumActivity.class);
 				t.addNextIntent(i);
-				b.setContentIntent(t.getPendingIntent(nextRequestId++, 0));
+				b.setContentIntent(t.getPendingIntent(nextRequestId++,
+						getImmutableFlags(0)));
 			} else {
 				// Touching the notification shows the forum list
 				Intent i = new Intent(appContext, NavDrawerActivity.class);
@@ -514,7 +536,8 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 				TaskStackBuilder t = TaskStackBuilder.create(appContext);
 				t.addParentStack(NavDrawerActivity.class);
 				t.addNextIntent(i);
-				b.setContentIntent(t.getPendingIntent(nextRequestId++, 0));
+				b.setContentIntent(t.getPendingIntent(nextRequestId++,
+						getImmutableFlags(0)));
 			}
 			notificationManager.notify(FORUM_POST_NOTIFICATION_ID, b.build());
 		}
@@ -566,7 +589,8 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 			TaskStackBuilder t = TaskStackBuilder.create(appContext);
 			t.addParentStack(NavDrawerActivity.class);
 			t.addNextIntent(i);
-			b.setContentIntent(t.getPendingIntent(nextRequestId++, 0));
+			b.setContentIntent(
+					t.getPendingIntent(nextRequestId++, getImmutableFlags(0)));
 
 			notificationManager.notify(BLOG_POST_NOTIFICATION_ID, b.build());
 		}
@@ -604,7 +628,8 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 		TaskStackBuilder t = TaskStackBuilder.create(appContext);
 		t.addParentStack(NavDrawerActivity.class);
 		t.addNextIntent(i);
-		b.setContentIntent(t.getPendingIntent(nextRequestId++, 0));
+		b.setContentIntent(
+				t.getPendingIntent(nextRequestId++, getImmutableFlags(0)));
 
 		notificationManager.notify(CONTACT_ADDED_NOTIFICATION_ID,
 				b.build());
@@ -619,13 +644,11 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 	public void showSignInNotification() {
 		if (blockSignInReminder) return;
 		if (SDK_INT >= 26) {
-			NotificationChannel channel =
-					new NotificationChannel(REMINDER_CHANNEL_ID, appContext
-							.getString(
-									R.string.reminder_notification_channel_title),
-							IMPORTANCE_LOW);
-			channel.setLockscreenVisibility(
-					NotificationCompat.VISIBILITY_SECRET);
+			NotificationChannel channel = new NotificationChannel(
+					REMINDER_CHANNEL_ID, appContext
+					.getString(R.string.reminder_notification_channel_title),
+					IMPORTANCE_LOW);
+			channel.setLockscreenVisibility(VISIBILITY_SECRET);
 			notificationManager.createNotificationChannel(channel);
 		}
 
@@ -647,12 +670,12 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 		Intent i1 = new Intent(appContext, SignInReminderReceiver.class);
 		i1.setAction(ACTION_DISMISS_REMINDER);
 		PendingIntent actionIntent =
-				PendingIntent.getBroadcast(appContext, 0, i1, 0);
+				getBroadcast(appContext, 0, i1, getImmutableFlags(0));
 		b.addAction(0, actionTitle, actionIntent);
 
 		Intent i = new Intent(appContext, SplashScreenActivity.class);
 		i.setFlags(FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_CLEAR_TOP);
-		b.setContentIntent(PendingIntent.getActivity(appContext, 0, i, 0));
+		b.setContentIntent(getActivity(appContext, 0, i, getImmutableFlags(0)));
 
 		notificationManager.notify(REMINDER_NOTIFICATION_ID, b.build());
 	}
@@ -719,5 +742,83 @@ class AndroidNotificationManagerImpl implements AndroidNotificationManager,
 	@Override
 	public void unblockAllBlogPostNotifications() {
 		androidExecutor.runOnUiThread((Runnable) () -> blockBlogs = false);
+	}
+
+	@Override
+	public void showHotspotNotification() {
+		if (SDK_INT >= 26) {
+			String channelTitle = appContext
+					.getString(R.string.hotspot_notification_channel_title);
+			NotificationChannel channel = new NotificationChannel(
+					HOTSPOT_CHANNEL_ID, channelTitle, IMPORTANCE_LOW);
+			channel.setLockscreenVisibility(VISIBILITY_SECRET);
+			notificationManager.createNotificationChannel(channel);
+		}
+		BriarNotificationBuilder b =
+				new BriarNotificationBuilder(appContext, HOTSPOT_CHANNEL_ID);
+		b.setSmallIcon(R.drawable.notification_hotspot);
+		b.setColorRes(R.color.briar_brand_green);
+		b.setContentTitle(
+				appContext.getText(R.string.hotspot_notification_title));
+		b.setNotificationCategory(CATEGORY_SERVICE);
+		b.setOngoing(true);
+		b.setShowWhen(true);
+
+		String actionTitle =
+				appContext.getString(R.string.hotspot_button_stop_sharing);
+		Intent i = new Intent(appContext, HotspotActivity.class);
+		i.addFlags(FLAG_ACTIVITY_SINGLE_TOP);
+		i.setAction(ACTION_STOP_HOTSPOT);
+		PendingIntent actionIntent =
+				getActivity(appContext, 0, i, getImmutableFlags(0));
+		b.addAction(R.drawable.ic_portable_wifi_off, actionTitle, actionIntent);
+		notificationManager.notify(HOTSPOT_NOTIFICATION_ID, b.build());
+	}
+
+	@Override
+	public void clearHotspotNotification() {
+		notificationManager.cancel(HOTSPOT_NOTIFICATION_ID);
+	}
+
+	@Override
+	public void showMailboxProblemNotification() {
+		if (SDK_INT >= 26) {
+			NotificationChannel channel = new NotificationChannel(
+					MAILBOX_PROBLEM_CHANNEL_ID, appContext.getString(
+					R.string.mailbox_error_notification_channel_title),
+					IMPORTANCE_DEFAULT);
+			channel.setLockscreenVisibility(VISIBILITY_SECRET);
+			notificationManager.createNotificationChannel(channel);
+		}
+
+		NotificationCompat.Builder b = new NotificationCompat.Builder(
+				appContext, MAILBOX_PROBLEM_CHANNEL_ID);
+		b.setSmallIcon(R.drawable.notification_mailbox);
+		b.setColor(getColor(appContext, R.color.briar_red_500));
+		b.setContentTitle(
+				appContext.getText(R.string.mailbox_error_notification_title));
+		b.setContentText(
+				appContext.getText(R.string.mailbox_error_notification_text));
+		b.setAutoCancel(true);
+		b.setNotificationSilent(); // not important enough for sound
+		b.setWhen(0); // Don't show the time
+		b.setPriority(PRIORITY_HIGH);
+
+		// Touching the notification shows the mailbox status page
+		Intent i = new Intent(appContext, MailboxActivity.class);
+		i.setData(EMPTY); // for some reason, the back navigation needs an Uri
+		i.setFlags(FLAG_ACTIVITY_CLEAR_TOP);
+		TaskStackBuilder t = TaskStackBuilder.create(appContext);
+		t.addParentStack(MailboxActivity.class);
+		t.addNextIntent(i);
+		b.setContentIntent(
+				t.getPendingIntent(nextRequestId++, getImmutableFlags(0)));
+
+		notificationManager.notify(MAILBOX_PROBLEM_NOTIFICATION_ID, b.build());
+	}
+
+	@Override
+	public void clearMailboxProblemNotification() {
+		notificationManager.cancel(MAILBOX_PROBLEM_NOTIFICATION_ID);
 	}
 }

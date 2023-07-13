@@ -4,8 +4,8 @@ import org.briarproject.bramble.api.contact.ContactId;
 import org.briarproject.bramble.api.db.DatabaseComponent;
 import org.briarproject.bramble.api.db.DatabaseExecutor;
 import org.briarproject.bramble.api.event.EventBus;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
+import org.briarproject.bramble.api.sync.OutgoingSessionRecord;
 import org.briarproject.bramble.api.sync.Priority;
 import org.briarproject.bramble.api.sync.PriorityHandler;
 import org.briarproject.bramble.api.sync.SyncRecordReader;
@@ -16,6 +16,7 @@ import org.briarproject.bramble.api.sync.SyncSession;
 import org.briarproject.bramble.api.sync.SyncSessionFactory;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.transport.StreamWriter;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,6 +25,8 @@ import java.util.concurrent.Executor;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
+
+import static org.briarproject.bramble.api.mailbox.MailboxConstants.MAX_FILE_PAYLOAD_BYTES;
 
 @Immutable
 @NotNullByDefault
@@ -60,17 +63,34 @@ class SyncSessionFactoryImpl implements SyncSessionFactory {
 
 	@Override
 	public SyncSession createSimplexOutgoingSession(ContactId c, TransportId t,
-			int maxLatency, StreamWriter streamWriter) {
+			long maxLatency, boolean eager, StreamWriter streamWriter) {
 		OutputStream out = streamWriter.getOutputStream();
 		SyncRecordWriter recordWriter =
 				recordWriterFactory.createRecordWriter(out);
-		return new SimplexOutgoingSession(db, dbExecutor, eventBus, c, t,
-				maxLatency, streamWriter, recordWriter);
+		if (eager) {
+			return new EagerSimplexOutgoingSession(db, eventBus, c, t,
+					maxLatency, streamWriter, recordWriter);
+		} else {
+			return new SimplexOutgoingSession(db, eventBus, c, t,
+					maxLatency, streamWriter, recordWriter);
+		}
+	}
+
+	@Override
+	public SyncSession createSimplexOutgoingSession(ContactId c, TransportId t,
+			long maxLatency, StreamWriter streamWriter,
+			OutgoingSessionRecord sessionRecord) {
+		OutputStream out = streamWriter.getOutputStream();
+		SyncRecordWriter recordWriter =
+				recordWriterFactory.createRecordWriter(out);
+		return new MailboxOutgoingSession(db, eventBus, c, t, maxLatency,
+				streamWriter, recordWriter, sessionRecord,
+				MAX_FILE_PAYLOAD_BYTES);
 	}
 
 	@Override
 	public SyncSession createDuplexOutgoingSession(ContactId c, TransportId t,
-			int maxLatency, int maxIdleTime, StreamWriter streamWriter,
+			long maxLatency, int maxIdleTime, StreamWriter streamWriter,
 			@Nullable Priority priority) {
 		OutputStream out = streamWriter.getOutputStream();
 		SyncRecordWriter recordWriter =

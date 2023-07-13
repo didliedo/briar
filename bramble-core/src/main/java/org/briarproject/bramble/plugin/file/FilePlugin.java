@@ -1,22 +1,23 @@
 package org.briarproject.bramble.plugin.file;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.PluginCallback;
 import org.briarproject.bramble.api.plugin.TransportConnectionReader;
 import org.briarproject.bramble.api.plugin.TransportConnectionWriter;
 import org.briarproject.bramble.api.plugin.simplex.SimplexPlugin;
 import org.briarproject.bramble.api.properties.TransportProperties;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.logging.Logger;
 
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
-import static org.briarproject.bramble.api.plugin.FileConstants.PROP_PATH;
 import static org.briarproject.bramble.api.plugin.Plugin.State.ACTIVE;
+import static org.briarproject.bramble.api.plugin.file.FileConstants.PROP_PATH;
 import static org.briarproject.bramble.util.LogUtils.logException;
 import static org.briarproject.bramble.util.StringUtils.isNullOrEmpty;
 
@@ -27,20 +28,15 @@ abstract class FilePlugin implements SimplexPlugin {
 			getLogger(FilePlugin.class.getName());
 
 	protected final PluginCallback callback;
-	protected final int maxLatency;
+	protected final long maxLatency;
 
-	protected abstract void writerFinished(File f, boolean exception);
-
-	protected abstract void readerFinished(File f, boolean exception,
-			boolean recognised);
-
-	FilePlugin(PluginCallback callback, int maxLatency) {
+	FilePlugin(PluginCallback callback, long maxLatency) {
 		this.callback = callback;
 		this.maxLatency = maxLatency;
 	}
 
 	@Override
-	public int getMaxLatency() {
+	public long getMaxLatency() {
 		return maxLatency;
 	}
 
@@ -50,9 +46,8 @@ abstract class FilePlugin implements SimplexPlugin {
 		String path = p.get(PROP_PATH);
 		if (isNullOrEmpty(path)) return null;
 		try {
-			File file = new File(path);
-			FileInputStream in = new FileInputStream(file);
-			return new FileTransportReader(file, in, this);
+			FileInputStream in = new FileInputStream(path);
+			return new TransportInputStreamReader(in);
 		} catch (IOException e) {
 			logException(LOG, WARNING, e);
 			return null;
@@ -70,8 +65,8 @@ abstract class FilePlugin implements SimplexPlugin {
 				LOG.info("Failed to create file");
 				return null;
 			}
-			FileOutputStream out = new FileOutputStream(file);
-			return new FileTransportWriter(file, out, this);
+			OutputStream out = new FileOutputStream(file);
+			return new TransportOutputStreamWriter(this, out);
 		} catch (IOException e) {
 			logException(LOG, WARNING, e);
 			return null;

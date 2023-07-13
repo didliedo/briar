@@ -3,30 +3,32 @@ package org.briarproject.briar.android.account;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.util.AttributeSet;
+import android.widget.Toast;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.briar.R;
+import org.briarproject.nullsafety.NotNullByDefault;
 
-import java.util.List;
+import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
 
 import androidx.annotation.StringRes;
 import androidx.annotation.UiThread;
 
-import static android.content.pm.PackageManager.MATCH_DEFAULT_ONLY;
-import static android.os.Build.VERSION.SDK_INT;
+import static android.widget.Toast.LENGTH_LONG;
+import static java.util.logging.Level.WARNING;
+import static java.util.logging.Logger.getLogger;
+import static org.briarproject.android.dontkillmelib.HuaweiUtils.appLaunchNeedsToBeShown;
+import static org.briarproject.android.dontkillmelib.HuaweiUtils.getHuaweiAppLaunchIntents;
+import static org.briarproject.bramble.util.LogUtils.logException;
 
 @UiThread
 @NotNullByDefault
 class HuaweiAppLaunchView extends PowerView {
 
-	private final static String PACKAGE_NAME = "com.huawei.systemmanager";
-	private final static String CLASS_NAME =
-			PACKAGE_NAME + ".power.ui.HwPowerManagerActivity";
+	private static final Logger LOG =
+			getLogger(HuaweiAppLaunchView.class.getName());
 
 	public HuaweiAppLaunchView(Context context) {
 		this(context, null);
@@ -39,8 +41,8 @@ class HuaweiAppLaunchView extends PowerView {
 	public HuaweiAppLaunchView(Context context, @Nullable AttributeSet attrs,
 			int defStyleAttr) {
 		super(context, attrs, defStyleAttr);
-		setText(R.string.setup_huawei_app_launch_text);
-		setButtonText(R.string.setup_huawei_app_launch_button);
+		setText(R.string.dnkm_huawei_app_launch_text);
+		setButtonText(R.string.dnkm_huawei_app_launch_button);
 	}
 
 	@Override
@@ -49,30 +51,30 @@ class HuaweiAppLaunchView extends PowerView {
 	}
 
 	public static boolean needsToBeShown(Context context) {
-		// "App launch" was introduced in EMUI 8 (Android 8.0)
-		if (SDK_INT < 26) return false;
-		PackageManager pm = context.getPackageManager();
-		List<ResolveInfo> resolveInfos = pm.queryIntentActivities(getIntent(),
-				MATCH_DEFAULT_ONLY);
-		return !resolveInfos.isEmpty();
+		return appLaunchNeedsToBeShown(context);
 	}
 
 	@Override
 	@StringRes
 	protected int getHelpText() {
-		return R.string.setup_huawei_app_launch_help;
+		return R.string.dnkm_huawei_app_launch_help;
 	}
 
 	@Override
 	protected void onButtonClick() {
-		getContext().startActivity(getIntent());
+		Context context = getContext();
+		for (Intent i : getHuaweiAppLaunchIntents()) {
+			try {
+				context.startActivity(i);
+				setChecked(true);
+				return;
+			} catch (Exception e) {
+				logException(LOG, WARNING, e);
+			}
+		}
+		Toast.makeText(context, R.string.dnkm_huawei_app_launch_error_toast,
+				LENGTH_LONG).show();
+		// Let the user continue with setup
 		setChecked(true);
 	}
-
-	private static Intent getIntent() {
-		Intent intent = new Intent();
-		intent.setClassName(PACKAGE_NAME, CLASS_NAME);
-		return intent;
-	}
-
 }

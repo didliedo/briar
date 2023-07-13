@@ -1,10 +1,10 @@
 package org.briarproject.bramble.api.plugin.duplex;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.Plugin;
 import org.briarproject.bramble.api.plugin.TransportConnectionReader;
 import org.briarproject.bramble.api.plugin.TransportConnectionWriter;
 import org.briarproject.bramble.api.properties.TransportProperties;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -70,13 +70,18 @@ public abstract class AbstractDuplexTransportConnection
 	private class Writer implements TransportConnectionWriter {
 
 		@Override
-		public int getMaxLatency() {
+		public long getMaxLatency() {
 			return plugin.getMaxLatency();
 		}
 
 		@Override
 		public int getMaxIdleTime() {
 			return plugin.getMaxIdleTime();
+		}
+
+		@Override
+		public boolean isLossyAndCheap() {
+			return false;
 		}
 
 		@Override

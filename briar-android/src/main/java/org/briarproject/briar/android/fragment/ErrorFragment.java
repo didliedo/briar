@@ -6,9 +6,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import androidx.annotation.Nullable;
 
@@ -17,7 +17,7 @@ import androidx.annotation.Nullable;
 @ParametersNotNullByDefault
 public class ErrorFragment extends BaseFragment {
 
-	private static final String TAG = ErrorFragment.class.getName();
+	public static final String TAG = ErrorFragment.class.getName();
 
 	private static final String ERROR_MSG = "errorMessage";
 
@@ -40,8 +40,7 @@ public class ErrorFragment extends BaseFragment {
 	public void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		Bundle args = getArguments();
-		if (args == null) throw new AssertionError();
+		Bundle args = requireArguments();
 		errorMessage = args.getString(ERROR_MSG);
 	}
 

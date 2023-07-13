@@ -6,8 +6,6 @@ import android.view.MenuItem;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.briar.R;
@@ -21,7 +19,10 @@ import org.briarproject.briar.android.view.TextSendController;
 import org.briarproject.briar.android.view.TextSendController.SendListener;
 import org.briarproject.briar.android.view.TextSendController.SendState;
 import org.briarproject.briar.android.view.UnreadMessageButton;
+import org.briarproject.briar.android.widget.LinkDialogFragment;
 import org.briarproject.briar.api.attachment.AttachmentHeader;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.List;
 
@@ -200,6 +201,12 @@ public abstract class ThreadListActivity<I extends ThreadItem, A extends ThreadI
 				textInput.setOnKeyboardShownListener(null);
 			});
 		}
+	}
+
+	@Override
+	public void onLinkClick(String url) {
+		LinkDialogFragment f = LinkDialogFragment.newInstance(url);
+		f.show(getSupportFragmentManager(), f.getUniqueTag());
 	}
 
 	protected void setToolbarSubTitle(SharingInfo sharingInfo) {

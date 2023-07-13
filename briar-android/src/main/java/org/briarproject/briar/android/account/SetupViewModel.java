@@ -2,13 +2,14 @@ package org.briarproject.briar.android.account;
 
 import android.app.Application;
 
+import org.briarproject.android.dontkillmelib.DozeHelper;
 import org.briarproject.bramble.api.account.AccountManager;
 import org.briarproject.bramble.api.crypto.PasswordStrengthEstimator;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.android.viewmodel.LiveEvent;
 import org.briarproject.briar.android.viewmodel.MutableLiveEvent;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.concurrent.Executor;
 import java.util.logging.Logger;
@@ -95,7 +96,7 @@ class SetupViewModel extends AndroidViewModel {
 	}
 
 	boolean needToShowDozeFragment() {
-		return dozeHelper.needToShowDozeFragment(getApplication());
+		return dozeHelper.needToShowDoNotKillMeFragment(getApplication());
 	}
 
 	void dozeExceptionConfirmed() {

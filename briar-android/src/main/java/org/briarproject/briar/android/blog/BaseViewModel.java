@@ -11,7 +11,6 @@ import org.briarproject.bramble.api.event.EventListener;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.identity.LocalAuthor;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.bramble.api.system.AndroidExecutor;
@@ -23,6 +22,7 @@ import org.briarproject.briar.api.blog.BlogCommentHeader;
 import org.briarproject.briar.api.blog.BlogManager;
 import org.briarproject.briar.api.blog.BlogPostHeader;
 import org.briarproject.briar.util.HtmlUtils;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -41,7 +41,6 @@ import static java.util.logging.Logger.getLogger;
 import static org.briarproject.bramble.util.LogUtils.logDuration;
 import static org.briarproject.bramble.util.LogUtils.logException;
 import static org.briarproject.bramble.util.LogUtils.now;
-import static org.briarproject.briar.util.HtmlUtils.ARTICLE;
 
 @NotNullByDefault
 abstract class BaseViewModel extends DbViewModel implements EventListener {
@@ -115,7 +114,7 @@ abstract class BaseViewModel extends DbViewModel implements EventListener {
 	@DatabaseExecutor
 	private String getPostText(Transaction txn, MessageId m)
 			throws DbException {
-		return HtmlUtils.clean(blogManager.getPostText(txn, m), ARTICLE);
+		return HtmlUtils.cleanArticle(blogManager.getPostText(txn, m));
 	}
 
 	LiveData<LiveResult<BlogPostItem>> loadBlogPost(GroupId g, MessageId m) {

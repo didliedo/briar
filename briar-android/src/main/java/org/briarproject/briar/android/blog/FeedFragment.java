@@ -9,8 +9,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
@@ -20,6 +18,8 @@ import org.briarproject.briar.android.util.BriarSnackbarBuilder;
 import org.briarproject.briar.android.view.BriarRecyclerView;
 import org.briarproject.briar.android.widget.LinkDialogFragment;
 import org.briarproject.briar.api.blog.Blog;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import javax.inject.Inject;
 
@@ -76,7 +76,7 @@ public class FeedFragment extends BaseFragment
 		list = v.findViewById(R.id.postList);
 		list.setLayoutManager(layoutManager);
 		list.setAdapter(adapter);
-		list.setEmptyImage(R.drawable.ic_empty_state_blog);
+		list.setEmptyImage(R.drawable.il_empty_state_blogs);
 		list.setEmptyText(R.string.blogs_feed_empty_state);
 		list.setEmptyAction(R.string.blogs_feed_empty_state_action);
 

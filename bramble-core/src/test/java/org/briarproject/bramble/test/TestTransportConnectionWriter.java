@@ -1,7 +1,7 @@
 package org.briarproject.bramble.test;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportConnectionWriter;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -15,10 +15,13 @@ public class TestTransportConnectionWriter
 		implements TransportConnectionWriter {
 
 	private final OutputStream out;
+	private final boolean lossyAndCheap;
 	private final CountDownLatch disposed = new CountDownLatch(1);
 
-	public TestTransportConnectionWriter(OutputStream out) {
+	public TestTransportConnectionWriter(OutputStream out,
+			boolean lossyAndCheap) {
 		this.out = out;
+		this.lossyAndCheap = lossyAndCheap;
 	}
 
 	public CountDownLatch getDisposedLatch() {
@@ -26,13 +29,18 @@ public class TestTransportConnectionWriter
 	}
 
 	@Override
-	public int getMaxLatency() {
+	public long getMaxLatency() {
 		return 30_000;
 	}
 
 	@Override
 	public int getMaxIdleTime() {
 		return 60_000;
+	}
+
+	@Override
+	public boolean isLossyAndCheap() {
+		return lossyAndCheap;
 	}
 
 	@Override

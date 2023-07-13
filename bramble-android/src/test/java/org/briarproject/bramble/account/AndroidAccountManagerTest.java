@@ -9,7 +9,7 @@ import org.briarproject.bramble.api.db.DatabaseConfig;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.test.BrambleMockTestCase;
 import org.jmock.Expectations;
-import org.jmock.lib.legacy.ClassImposteriser;
+import org.jmock.imposters.ByteBuddyClassImposteriser;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -44,7 +44,7 @@ public class AndroidAccountManagerTest extends BrambleMockTestCase {
 	private AndroidAccountManager accountManager;
 
 	public AndroidAccountManagerTest() {
-		context.setImposteriser(ClassImposteriser.INSTANCE);
+		context.setImposteriser(ByteBuddyClassImposteriser.INSTANCE);
 		app = context.mock(Application.class);
 		applicationInfo = new ApplicationInfo();
 		applicationInfo.dataDir = testDir.getAbsolutePath();
@@ -87,6 +87,10 @@ public class AndroidAccountManagerTest extends BrambleMockTestCase {
 		File potatoFile = new File(potatoDir, "file");
 		File filesDir = new File(testDir, "filesDir");
 		File externalCacheDir = new File(testDir, "externalCacheDir");
+		File externalCacheDir1 = new File(testDir, "externalCacheDir1");
+		File externalCacheDir2 = new File(testDir, "externalCacheDir2");
+		File externalMediaDir1 = new File(testDir, "externalMediaDir1");
+		File externalMediaDir2 = new File(testDir, "externalMediaDir2");
 
 		context.checking(new Expectations() {{
 			oneOf(prefs).edit();
@@ -109,6 +113,12 @@ public class AndroidAccountManagerTest extends BrambleMockTestCase {
 			will(returnValue(cacheDir));
 			oneOf(app).getExternalCacheDir();
 			will(returnValue(externalCacheDir));
+			oneOf(app).getExternalCacheDirs();
+			will(returnValue(
+					new File[] {externalCacheDir1, externalCacheDir2}));
+			oneOf(app).getExternalMediaDirs();
+			will(returnValue(
+					new File[] {externalMediaDir1, externalMediaDir2}));
 		}});
 
 		assertTrue(dbDir.mkdirs());
@@ -125,6 +135,10 @@ public class AndroidAccountManagerTest extends BrambleMockTestCase {
 		assertTrue(potatoFile.createNewFile());
 		assertTrue(filesDir.mkdirs());
 		assertTrue(externalCacheDir.mkdirs());
+		assertTrue(externalCacheDir1.mkdirs());
+		assertTrue(externalCacheDir2.mkdirs());
+		assertTrue(externalMediaDir1.mkdirs());
+		assertTrue(externalMediaDir2.mkdirs());
 
 		accountManager.deleteAccount();
 
@@ -142,6 +156,10 @@ public class AndroidAccountManagerTest extends BrambleMockTestCase {
 		assertFalse(potatoFile.exists());
 		assertFalse(filesDir.exists());
 		assertFalse(externalCacheDir.exists());
+		assertFalse(externalCacheDir1.exists());
+		assertFalse(externalCacheDir2.exists());
+		assertFalse(externalMediaDir1.exists());
+		assertFalse(externalMediaDir2.exists());
 	}
 
 	@After

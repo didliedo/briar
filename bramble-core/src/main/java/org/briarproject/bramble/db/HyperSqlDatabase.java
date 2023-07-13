@@ -5,10 +5,10 @@ import org.briarproject.bramble.api.db.DatabaseConfig;
 import org.briarproject.bramble.api.db.DbClosedException;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.MigrationListener;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.MessageFactory;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.util.StringUtils;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.File;
 import java.sql.Connection;
@@ -79,11 +79,11 @@ class HyperSqlDatabase extends JdbcDatabase {
 		Connection c = null;
 		Statement s = null;
 		try {
-			super.closeAllConnections();
+			closeAllConnections();
 			c = createConnection();
 			setDirty(c, false);
 			s = c.createStatement();
-			s.executeQuery("SHUTDOWN");
+			s.executeQuery("SHUTDOWN COMPACT");
 			s.close();
 			c.close();
 		} catch (SQLException e) {
@@ -106,7 +106,7 @@ class HyperSqlDatabase extends JdbcDatabase {
 		Connection c = null;
 		Statement s = null;
 		try {
-			super.closeAllConnections();
+			closeAllConnections();
 			c = createConnection();
 			s = c.createStatement();
 			s.executeQuery("SHUTDOWN COMPACT");

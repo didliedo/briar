@@ -28,8 +28,8 @@ import org.briarproject.briar.android.contact.add.remote.AddContactActivity;
 import org.briarproject.briar.android.contact.add.remote.LinkExchangeFragment;
 import org.briarproject.briar.android.contact.add.remote.NicknameFragment;
 import org.briarproject.briar.android.contact.add.remote.PendingContactListActivity;
+import org.briarproject.briar.android.contact.connect.ConnectViaBluetoothActivity;
 import org.briarproject.briar.android.conversation.AliasDialogFragment;
-import org.briarproject.briar.android.conversation.BluetoothConnecterDialogFragment;
 import org.briarproject.briar.android.conversation.ConversationActivity;
 import org.briarproject.briar.android.conversation.ConversationSettingsDialog;
 import org.briarproject.briar.android.conversation.ImageActivity;
@@ -38,6 +38,7 @@ import org.briarproject.briar.android.forum.CreateForumActivity;
 import org.briarproject.briar.android.forum.ForumActivity;
 import org.briarproject.briar.android.forum.ForumListFragment;
 import org.briarproject.briar.android.fragment.ScreenFilterDialogFragment;
+import org.briarproject.briar.android.hotspot.HotspotActivity;
 import org.briarproject.briar.android.introduction.ContactChooserFragment;
 import org.briarproject.briar.android.introduction.IntroductionActivity;
 import org.briarproject.briar.android.introduction.IntroductionMessageFragment;
@@ -45,6 +46,7 @@ import org.briarproject.briar.android.login.ChangePasswordActivity;
 import org.briarproject.briar.android.login.OpenDatabaseFragment;
 import org.briarproject.briar.android.login.PasswordFragment;
 import org.briarproject.briar.android.login.StartupActivity;
+import org.briarproject.briar.android.mailbox.MailboxActivity;
 import org.briarproject.briar.android.navdrawer.NavDrawerActivity;
 import org.briarproject.briar.android.navdrawer.TransportsActivity;
 import org.briarproject.briar.android.panic.PanicPreferencesActivity;
@@ -63,6 +65,7 @@ import org.briarproject.briar.android.privategroup.memberlist.GroupMemberModule;
 import org.briarproject.briar.android.privategroup.reveal.GroupRevealModule;
 import org.briarproject.briar.android.privategroup.reveal.RevealContactsActivity;
 import org.briarproject.briar.android.privategroup.reveal.RevealContactsFragment;
+import org.briarproject.briar.android.removabledrive.RemovableDriveActivity;
 import org.briarproject.briar.android.reporting.CrashFragment;
 import org.briarproject.briar.android.reporting.CrashReportActivity;
 import org.briarproject.briar.android.reporting.ReportFormFragment;
@@ -176,6 +179,10 @@ public interface ActivityComponent {
 
 	void inject(CrashReportActivity crashReportActivity);
 
+	void inject(HotspotActivity hotspotActivity);
+
+	void inject(RemovableDriveActivity activity);
+
 	// Fragments
 
 	void inject(SetupFragment fragment);
@@ -232,9 +239,6 @@ public interface ActivityComponent {
 
 	void inject(ConversationSettingsDialog dialog);
 
-	void inject(
-			BluetoothConnecterDialogFragment bluetoothConnecterDialogFragment);
-
 	void inject(RssFeedImportFragment fragment);
 
 	void inject(RssFeedManageFragment fragment);
@@ -242,4 +246,8 @@ public interface ActivityComponent {
 	void inject(RssFeedImportFailedDialogFragment fragment);
 
 	void inject(RssFeedDeleteFeedDialogFragment fragment);
+
+	void inject(ConnectViaBluetoothActivity connectViaBluetoothActivity);
+
+	void inject(MailboxActivity mailboxActivity);
 }

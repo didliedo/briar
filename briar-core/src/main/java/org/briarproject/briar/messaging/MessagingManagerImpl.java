@@ -17,7 +17,6 @@ import org.briarproject.bramble.api.db.Metadata;
 import org.briarproject.bramble.api.db.NoSuchMessageException;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager.OpenDatabaseHook;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Group.Visibility;
 import org.briarproject.bramble.api.sync.GroupId;
@@ -34,6 +33,7 @@ import org.briarproject.briar.api.autodelete.AutoDeleteManager;
 import org.briarproject.briar.api.autodelete.event.ConversationMessagesDeletedEvent;
 import org.briarproject.briar.api.client.MessageTracker;
 import org.briarproject.briar.api.client.MessageTracker.GroupCount;
+import org.briarproject.briar.api.conversation.ConversationManager;
 import org.briarproject.briar.api.conversation.ConversationManager.ConversationClient;
 import org.briarproject.briar.api.conversation.ConversationMessageHeader;
 import org.briarproject.briar.api.conversation.DeletionResult;
@@ -43,6 +43,7 @@ import org.briarproject.briar.api.messaging.PrivateMessageFormat;
 import org.briarproject.briar.api.messaging.PrivateMessageHeader;
 import org.briarproject.briar.api.messaging.event.AttachmentReceivedEvent;
 import org.briarproject.briar.api.messaging.event.PrivateMessageReceivedEvent;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -63,6 +64,7 @@ import static java.util.Collections.emptyList;
 import static java.util.logging.Logger.getLogger;
 import static org.briarproject.bramble.api.client.ContactGroupConstants.GROUP_KEY_CONTACT_ID;
 import static org.briarproject.bramble.api.sync.SyncConstants.MAX_MESSAGE_BODY_LENGTH;
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_DO_NOT_SHARE;
 import static org.briarproject.bramble.util.IoUtils.copyAndClose;
 import static org.briarproject.bramble.util.LogUtils.logDuration;
 import static org.briarproject.bramble.util.LogUtils.now;
@@ -95,6 +97,7 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 	private final DatabaseComponent db;
 	private final ClientHelper clientHelper;
 	private final MetadataParser metadataParser;
+	private final ConversationManager conversationManager;
 	private final MessageTracker messageTracker;
 	private final ClientVersioningManager clientVersioningManager;
 	private final ContactGroupFactory contactGroupFactory;
@@ -106,12 +109,14 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 			ClientHelper clientHelper,
 			ClientVersioningManager clientVersioningManager,
 			MetadataParser metadataParser,
+			ConversationManager conversationManager,
 			MessageTracker messageTracker,
 			ContactGroupFactory contactGroupFactory,
 			AutoDeleteManager autoDeleteManager) {
 		this.db = db;
 		this.clientHelper = clientHelper;
 		this.metadataParser = metadataParser;
+		this.conversationManager = conversationManager;
 		this.messageTracker = messageTracker;
 		this.clientVersioningManager = clientVersioningManager;
 		this.contactGroupFactory = contactGroupFactory;
@@ -172,12 +177,12 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 	}
 
 	@Override
-	public boolean incomingMessage(Transaction txn, Message m, Metadata meta)
-			throws DbException, InvalidMessageException {
+	public DeliveryAction incomingMessage(Transaction txn, Message m,
+			Metadata meta) throws DbException, InvalidMessageException {
 		try {
 			BdfDictionary metaDict = metadataParser.parse(meta);
 			// Message type is null for version 0.0 private messages
-			Long messageType = metaDict.getOptionalLong(MSG_KEY_MSG_TYPE);
+			Integer messageType = metaDict.getOptionalInt(MSG_KEY_MSG_TYPE);
 			if (messageType == null) {
 				incomingPrivateMessage(txn, m, metaDict, true, emptyList());
 			} else if (messageType == PRIVATE_MESSAGE) {
@@ -193,8 +198,7 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 		} catch (FormatException e) {
 			throw new InvalidMessageException(e);
 		}
-		// Don't share message
-		return false;
+		return ACCEPT_DO_NOT_SHARE;
 	}
 
 	private void incomingPrivateMessage(Transaction txn, Message m,
@@ -214,7 +218,7 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 		PrivateMessageReceivedEvent event =
 				new PrivateMessageReceivedEvent(header, contactId);
 		txn.attach(event);
-		messageTracker.trackIncomingMessage(txn, m);
+		conversationManager.trackIncomingMessage(txn, m);
 		if (timer != NO_AUTO_DELETE_TIMER) {
 			db.setCleanupTimerDuration(txn, m.getId(), timer);
 		}
@@ -324,7 +328,7 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 			if (timer != NO_AUTO_DELETE_TIMER) {
 				db.setCleanupTimerDuration(txn, m.getMessage().getId(), timer);
 			}
-			messageTracker.trackOutgoingMessage(txn, m.getMessage());
+			conversationManager.trackOutgoingMessage(txn, m.getMessage());
 		} catch (FormatException e) {
 			throw new AssertionError(e);
 		}
@@ -367,7 +371,7 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 		try {
 			BdfDictionary meta =
 					clientHelper.getGroupMetadataAsDictionary(txn, g);
-			return new ContactId(meta.getLong(GROUP_KEY_CONTACT_ID).intValue());
+			return new ContactId(meta.getInt(GROUP_KEY_CONTACT_ID));
 		} catch (FormatException e) {
 			throw new DbException(e);
 		}
@@ -377,7 +381,7 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 	public ContactId getContactId(GroupId g) throws DbException {
 		try {
 			BdfDictionary meta = clientHelper.getGroupMetadataAsDictionary(g);
-			return new ContactId(meta.getLong(GROUP_KEY_CONTACT_ID).intValue());
+			return new ContactId(meta.getInt(GROUP_KEY_CONTACT_ID));
 		} catch (FormatException e) {
 			throw new DbException(e);
 		}
@@ -385,14 +389,13 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 
 	@Override
 	public GroupId getConversationId(ContactId c) throws DbException {
-		Contact contact;
-		Transaction txn = db.startTransaction(true);
-		try {
-			contact = db.getContact(txn, c);
-			db.commitTransaction(txn);
-		} finally {
-			db.endTransaction(txn);
-		}
+		return db.transactionWithResult(true,
+				txn -> getConversationId(txn, c));
+	}
+
+	@Override
+	public GroupId getConversationId(Transaction txn, ContactId c) throws DbException {
+		Contact contact = db.getContact(txn, c);
 		return getContactGroup(contact).getId();
 	}
 
@@ -416,7 +419,7 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 			if (meta == null) continue;
 			try {
 				// Message type is null for version 0.0 private messages
-				Long messageType = meta.getOptionalLong(MSG_KEY_MSG_TYPE);
+				Integer messageType = meta.getOptionalInt(MSG_KEY_MSG_TYPE);
 				if (messageType != null && messageType != PRIVATE_MESSAGE)
 					continue;
 				long timestamp = meta.getLong(MSG_KEY_TIMESTAMP);
@@ -450,7 +453,8 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 			Map<MessageId, BdfDictionary> messages =
 					clientHelper.getMessageMetadataAsDictionary(txn, g);
 			for (Entry<MessageId, BdfDictionary> entry : messages.entrySet()) {
-				Long type = entry.getValue().getOptionalLong(MSG_KEY_MSG_TYPE);
+				Integer type =
+						entry.getValue().getOptionalInt(MSG_KEY_MSG_TYPE);
 				if (type == null || type == PRIVATE_MESSAGE)
 					result.add(entry.getKey());
 			}
@@ -462,8 +466,14 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 
 	@Override
 	public String getMessageText(MessageId m) throws DbException {
+		return db.transactionWithNullableResult(true, txn ->
+				getMessageText(txn, m));
+	}
+
+	@Override
+	public String getMessageText(Transaction txn, MessageId m) throws DbException {
 		try {
-			BdfList body = clientHelper.getMessageAsList(m);
+			BdfList body = clientHelper.getMessageAsList(txn, m);
 			if (body.size() == 1) return body.getString(0); // Legacy format
 			else return body.getOptionalString(1);
 		} catch (FormatException e) {
@@ -518,7 +528,7 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 		try {
 			BdfDictionary meta =
 					clientHelper.getMessageMetadataAsDictionary(txn, m);
-			Long messageType = meta.getOptionalLong(MSG_KEY_MSG_TYPE);
+			Integer messageType = meta.getOptionalInt(MSG_KEY_MSG_TYPE);
 			if (messageType != null && messageType == PRIVATE_MESSAGE) {
 				for (AttachmentHeader h : parseAttachmentHeaders(g, meta)) {
 					try {
@@ -545,7 +555,7 @@ class MessagingManagerImpl implements MessagingManager, IncomingMessageHook,
 			int unreadCount = 0;
 			for (Entry<MessageId, BdfDictionary> entry : metadata.entrySet()) {
 				BdfDictionary meta = entry.getValue();
-				Long messageType = meta.getOptionalLong(MSG_KEY_MSG_TYPE);
+				Integer messageType = meta.getOptionalInt(MSG_KEY_MSG_TYPE);
 				if (messageType == null || messageType == PRIVATE_MESSAGE) {
 					msgCount++;
 					if (!meta.getBoolean(MSG_KEY_READ)) unreadCount++;

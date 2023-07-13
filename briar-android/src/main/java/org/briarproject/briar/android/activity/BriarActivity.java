@@ -1,13 +1,13 @@
 package org.briarproject.briar.android.activity;
 
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.transition.Transition;
 import android.view.Window;
 import android.widget.CheckBox;
+import android.widget.Toast;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
-import org.briarproject.bramble.api.system.AndroidWakeLockManager;
+import org.briarproject.android.dontkillmelib.wakelock.AndroidWakeLockManager;
 import org.briarproject.bramble.api.system.Wakeful;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.BriarApplication;
@@ -18,13 +18,15 @@ import org.briarproject.briar.android.controller.handler.UiResultHandler;
 import org.briarproject.briar.android.login.StartupActivity;
 import org.briarproject.briar.android.logout.ExitActivity;
 import org.briarproject.briar.api.android.LockManager;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-import androidx.annotation.RequiresApi;
+import androidx.annotation.StringRes;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.Toolbar;
@@ -34,13 +36,16 @@ import static android.content.Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS;
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 import static android.content.Intent.FLAG_ACTIVITY_NO_ANIMATION;
 import static android.os.Build.VERSION.SDK_INT;
+import static android.widget.Toast.LENGTH_LONG;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
+import static org.briarproject.android.dontkillmelib.DozeUtils.getDozeWhitelistingIntent;
+import static org.briarproject.bramble.util.LogUtils.logException;
 import static org.briarproject.briar.android.activity.RequestCodes.REQUEST_DOZE_WHITELISTING;
 import static org.briarproject.briar.android.activity.RequestCodes.REQUEST_PASSWORD;
 import static org.briarproject.briar.android.activity.RequestCodes.REQUEST_UNLOCK;
 import static org.briarproject.briar.android.util.UiUtils.excludeSystemUi;
-import static org.briarproject.briar.android.util.UiUtils.getDozeWhitelistingIntent;
 import static org.briarproject.briar.android.util.UiUtils.isSamsung7;
 
 @MethodsNotNullByDefault
@@ -115,10 +120,7 @@ public abstract class BriarActivity extends BaseActivity {
 			briarController.hasDozed(new UiResultHandler<Boolean>(this) {
 				@Override
 				public void onResultUi(Boolean result) {
-					if (result) {
-						showDozeDialog(getString(R.string.warning_dozed,
-								getString(R.string.app_name)));
-					}
+					if (result) showDozeDialog(R.string.dnkm_warning_dozed_1);
 				}
 			});
 		}
@@ -137,8 +139,7 @@ public abstract class BriarActivity extends BaseActivity {
 	 * @param exitTransition used to move views out when starting a <b>new</b> activity.
 	 * @param returnTransition used when window is closing, because the activity is finishing.
 	 */
-	@RequiresApi(api = 21)
-	public void setSceneTransitionAnimation(
+	protected void setSceneTransitionAnimation(
 			@Nullable Transition enterTransition,
 			@Nullable Transition exitTransition,
 			@Nullable Transition returnTransition) {
@@ -175,7 +176,7 @@ public abstract class BriarActivity extends BaseActivity {
 		return toolbar;
 	}
 
-	protected void showDozeDialog(String message) {
+	protected void showDozeDialog(@StringRes int message) {
 		AlertDialog.Builder b =
 				new AlertDialog.Builder(this, R.style.BriarDialogTheme);
 		b.setMessage(message);
@@ -183,7 +184,13 @@ public abstract class BriarActivity extends BaseActivity {
 		b.setPositiveButton(R.string.fix,
 				(dialog, which) -> {
 					Intent i = getDozeWhitelistingIntent(BriarActivity.this);
-					startActivityForResult(i, REQUEST_DOZE_WHITELISTING);
+					try {
+						startActivityForResult(i, REQUEST_DOZE_WHITELISTING);
+					} catch (ActivityNotFoundException e) {
+						logException(LOG, WARNING, e);
+						Toast.makeText(this, R.string.error_start_activity,
+								LENGTH_LONG).show();
+					}
 					dialog.dismiss();
 				});
 		b.setNegativeButton(R.string.cancel,
@@ -234,8 +241,7 @@ public abstract class BriarActivity extends BaseActivity {
 
 	@Wakeful
 	private void finishAndExit() {
-		if (SDK_INT >= 21) finishAndRemoveTask();
-		else supportFinishAfterTransition();
+		finishAndRemoveTask();
 		LOG.info("Exiting");
 		BriarApplication app = (BriarApplication) getApplication();
 		if (!app.isInstrumentationTest()) System.exit(0);

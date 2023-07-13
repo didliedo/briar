@@ -10,8 +10,6 @@ import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.contact.add.nearby.AddContactState.ContactExchangeStarted;
@@ -20,7 +18,12 @@ import org.briarproject.briar.android.contact.add.nearby.AddContactState.KeyAgre
 import org.briarproject.briar.android.contact.add.nearby.AddContactState.KeyAgreementWaiting;
 import org.briarproject.briar.android.contact.add.nearby.AddContactState.QrCodeScanned;
 import org.briarproject.briar.android.fragment.BaseFragment;
+import org.briarproject.briar.android.qrcode.CameraException;
+import org.briarproject.briar.android.qrcode.CameraView;
+import org.briarproject.briar.android.view.InfoView;
 import org.briarproject.briar.android.view.QrCodeView;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.logging.Logger;
 
@@ -55,6 +58,7 @@ public class AddNearbyContactFragment extends BaseFragment
 	private CameraView cameraView;
 	private LinearLayout cameraOverlay;
 	private View statusView;
+	private InfoView infoView;
 	private QrCodeView qrCodeView;
 	private TextView status;
 
@@ -89,6 +93,8 @@ public class AddNearbyContactFragment extends BaseFragment
 		cameraOverlay = view.findViewById(R.id.camera_overlay);
 		statusView = view.findViewById(R.id.status_container);
 		status = view.findViewById(R.id.connect_status);
+		infoView = view.findViewById(R.id.info_view);
+		infoView.setText(R.string.info_both_must_scan);
 		qrCodeView = view.findViewById(R.id.qr_code_view);
 		qrCodeView.setFullscreenListener(this);
 
@@ -158,6 +164,7 @@ public class AddNearbyContactFragment extends BaseFragment
 		} else if (state instanceof KeyAgreementWaiting) {
 			status.setText(R.string.waiting_for_contact_to_scan);
 		} else if (state instanceof KeyAgreementStarted) {
+			infoView.setVisibility(INVISIBLE);
 			qrCodeView.setVisibility(INVISIBLE);
 			status.setText(R.string.authenticating_with_device);
 		} else if (state instanceof ContactExchangeStarted) {

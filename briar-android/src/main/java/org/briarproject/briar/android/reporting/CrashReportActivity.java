@@ -7,14 +7,15 @@ import android.os.Looper;
 import android.os.Process;
 import android.widget.Toast;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.activity.BaseActivity;
 import org.briarproject.briar.android.fragment.BaseFragment;
 import org.briarproject.briar.android.fragment.BaseFragment.BaseFragmentListener;
 import org.briarproject.briar.android.logout.HideUiActivity;
+import org.briarproject.briar.api.android.MemoryStats;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import javax.inject.Inject;
 
@@ -33,9 +34,11 @@ import static java.util.Objects.requireNonNull;
 public class CrashReportActivity extends BaseActivity
 		implements BaseFragmentListener {
 
+	public static final String EXTRA_INITIAL_COMMENT = "initialComment";
 	public static final String EXTRA_THROWABLE = "throwable";
 	public static final String EXTRA_APP_START_TIME = "appStartTime";
 	public static final String EXTRA_APP_LOGCAT = "logcat";
+	public static final String EXTRA_MEMORY_STATS = "memoryStats";
 
 	@Inject
 	ViewModelProvider.Factory viewModelFactory;
@@ -55,10 +58,13 @@ public class CrashReportActivity extends BaseActivity
 		setContentView(R.layout.activity_dev_report);
 
 		Intent intent = getIntent();
+		String initialComment = intent.getStringExtra(EXTRA_INITIAL_COMMENT);
 		Throwable t = (Throwable) intent.getSerializableExtra(EXTRA_THROWABLE);
 		long appStartTime = intent.getLongExtra(EXTRA_APP_START_TIME, -1);
 		byte[] logKey = intent.getByteArrayExtra(EXTRA_APP_LOGCAT);
-		viewModel.init(t, appStartTime, logKey);
+		MemoryStats memoryStats =
+				(MemoryStats) intent.getSerializableExtra(EXTRA_MEMORY_STATS);
+		viewModel.init(t, appStartTime, logKey, initialComment, memoryStats);
 		viewModel.getShowReport().observeEvent(this, show -> {
 			if (show) displayFragment(true);
 		});
@@ -85,7 +91,7 @@ public class CrashReportActivity extends BaseActivity
 		exit();
 	}
 
-	void displayFragment(boolean showReportForm) {
+	private void displayFragment(boolean showReportForm) {
 		BaseFragment f;
 		if (showReportForm) {
 			f = new ReportFormFragment();
@@ -99,7 +105,7 @@ public class CrashReportActivity extends BaseActivity
 				.commit();
 	}
 
-	void exit() {
+	private void exit() {
 		if (!viewModel.isFeedback()) {
 			Intent i = new Intent(this, HideUiActivity.class);
 			i.addFlags(FLAG_ACTIVITY_NEW_TASK

@@ -1,5 +1,8 @@
 package org.briarproject.bramble.plugin.tor;
 
+import org.briarproject.onionwrapper.CircumventionProvider;
+import org.briarproject.onionwrapper.CircumventionProviderFactory;
+
 import javax.inject.Singleton;
 
 import dagger.Module;
@@ -10,8 +13,7 @@ public class CircumventionModule {
 
 	@Provides
 	@Singleton
-	CircumventionProvider provideCircumventionProvider(
-			CircumventionProviderImpl provider) {
-		return provider;
+	CircumventionProvider provideCircumventionProvider() {
+		return CircumventionProviderFactory.createCircumventionProvider();
 	}
 }

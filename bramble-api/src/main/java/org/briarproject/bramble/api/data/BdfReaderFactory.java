@@ -1,6 +1,6 @@
 package org.briarproject.bramble.api.data;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.InputStream;
 
@@ -9,6 +9,8 @@ public interface BdfReaderFactory {
 
 	BdfReader createReader(InputStream in);
 
+	BdfReader createReader(InputStream in, boolean canonical);
+
 	BdfReader createReader(InputStream in, int nestedLimit,
-			int maxBufferSize);
+			int maxBufferSize, boolean canonical);
 }

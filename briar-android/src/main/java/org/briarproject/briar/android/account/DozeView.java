@@ -4,13 +4,13 @@ package org.briarproject.briar.android.account;
 import android.content.Context;
 import android.util.AttributeSet;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.briar.R;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 
-import static org.briarproject.briar.android.util.UiUtils.needsDozeWhitelisting;
+import static org.briarproject.android.dontkillmelib.DozeUtils.needsDozeWhitelisting;
 
 @UiThread
 @NotNullByDefault
@@ -30,22 +30,18 @@ class DozeView extends PowerView {
 	public DozeView(Context context, @Nullable AttributeSet attrs,
 			int defStyleAttr) {
 		super(context, attrs, defStyleAttr);
-		setText(R.string.setup_doze_intro);
-		setButtonText(R.string.setup_doze_button);
+		setText(R.string.dnkm_doze_intro);
+		setButtonText(R.string.dnkm_doze_button);
 	}
 
 	@Override
 	public boolean needsToBeShown() {
-		return needsToBeShown(getContext());
-	}
-
-	public static boolean needsToBeShown(Context context) {
-		return needsDozeWhitelisting(context);
+		return needsDozeWhitelisting(getContext());
 	}
 
 	@Override
 	protected int getHelpText() {
-		return R.string.setup_doze_explanation;
+		return R.string.dnkm_doze_explanation;
 	}
 
 	@Override
@@ -54,7 +50,7 @@ class DozeView extends PowerView {
 		onButtonClickListener.run();
 	}
 
-	public void setOnButtonClickListener(Runnable runnable) {
+	void setOnButtonClickListener(Runnable runnable) {
 		onButtonClickListener = runnable;
 	}
 

@@ -4,6 +4,11 @@ import net.i2p.crypto.eddsa.EdDSAPrivateKey;
 import net.i2p.crypto.eddsa.EdDSAPublicKey;
 import net.i2p.crypto.eddsa.KeyPairGenerator;
 
+import org.bouncycastle.crypto.CryptoException;
+import org.bouncycastle.crypto.Digest;
+import org.bouncycastle.crypto.digests.Blake2bDigest;
+import org.bouncycastle.crypto.digests.SHA3Digest;
+import org.briarproject.bramble.api.UniqueId;
 import org.briarproject.bramble.api.crypto.AgreementPrivateKey;
 import org.briarproject.bramble.api.crypto.AgreementPublicKey;
 import org.briarproject.bramble.api.crypto.CryptoComponent;
@@ -16,13 +21,11 @@ import org.briarproject.bramble.api.crypto.PublicKey;
 import org.briarproject.bramble.api.crypto.SecretKey;
 import org.briarproject.bramble.api.crypto.SignaturePrivateKey;
 import org.briarproject.bramble.api.crypto.SignaturePublicKey;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.system.SecureRandomProvider;
+import org.briarproject.bramble.util.Base32;
 import org.briarproject.bramble.util.ByteUtils;
 import org.briarproject.bramble.util.StringUtils;
-import org.spongycastle.crypto.CryptoException;
-import org.spongycastle.crypto.Digest;
-import org.spongycastle.crypto.digests.Blake2bDigest;
+import org.briarproject.nullsafety.NotNullByDefault;
 import org.whispersystems.curve25519.Curve25519;
 import org.whispersystems.curve25519.Curve25519KeyPair;
 
@@ -31,6 +34,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.Security;
+import java.util.Locale;
 import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
@@ -38,6 +42,7 @@ import javax.inject.Inject;
 
 import static java.lang.System.arraycopy;
 import static java.util.logging.Level.INFO;
+import static java.util.logging.Logger.getLogger;
 import static org.briarproject.bramble.api.crypto.CryptoConstants.KEY_TYPE_AGREEMENT;
 import static org.briarproject.bramble.api.crypto.CryptoConstants.KEY_TYPE_SIGNATURE;
 import static org.briarproject.bramble.api.crypto.DecryptionResult.INVALID_CIPHERTEXT;
@@ -46,18 +51,21 @@ import static org.briarproject.bramble.api.crypto.DecryptionResult.KEY_STRENGTHE
 import static org.briarproject.bramble.util.ByteUtils.INT_32_BYTES;
 import static org.briarproject.bramble.util.LogUtils.logDuration;
 import static org.briarproject.bramble.util.LogUtils.now;
+import static org.briarproject.bramble.util.StringUtils.US_ASCII;
 
 @NotNullByDefault
 class CryptoComponentImpl implements CryptoComponent {
 
 	private static final Logger LOG =
-			Logger.getLogger(CryptoComponentImpl.class.getName());
+			getLogger(CryptoComponentImpl.class.getName());
 
 	private static final int SIGNATURE_KEY_PAIR_BITS = 256;
 	private static final int STORAGE_IV_BYTES = 24; // 196 bits
 	private static final int PBKDF_SALT_BYTES = 32; // 256 bits
 	private static final byte PBKDF_FORMAT_SCRYPT = 0;
 	private static final byte PBKDF_FORMAT_SCRYPT_STRENGTHENED = 1;
+	private static final byte ONION_HS_PROTOCOL_VERSION = 3;
+	private static final int ONION_CHECKSUM_BYTES = 2;
 
 	private final SecureRandom secureRandom;
 	private final PasswordBasedKdf passwordBasedKdf;
@@ -121,6 +129,13 @@ class CryptoComponentImpl implements CryptoComponent {
 			throw new SecurityException("Wrong SHA1PRNG provider: "
 					+ random.getProvider().getClass());
 		}
+	}
+
+	@Override
+	public UniqueId generateUniqueId() {
+		byte[] b = new byte[UniqueId.LENGTH];
+		secureRandom.nextBytes(b);
+		return new UniqueId(b);
 	}
 
 	@Override
@@ -208,7 +223,8 @@ class CryptoComponentImpl implements CryptoComponent {
 	}
 
 	@Override
-	public SecretKey deriveSharedSecret(String label,
+	@Deprecated
+	public SecretKey deriveSharedSecretBadly(String label,
 			PublicKey theirStaticPublicKey, PublicKey theirEphemeralPublicKey,
 			KeyPair ourStaticKeyPair, KeyPair ourEphemeralKeyPair,
 			boolean alice, byte[]... inputs) throws GeneralSecurityException {
@@ -218,6 +234,35 @@ class CryptoComponentImpl implements CryptoComponent {
 		// Alice static/Bob static
 		hashInputs[0] = performRawKeyAgreement(ourStaticPrivateKey,
 				theirStaticPublicKey);
+		// Alice static/Bob ephemeral, Bob static/Alice ephemeral
+		if (alice) {
+			hashInputs[1] = performRawKeyAgreement(ourStaticPrivateKey,
+					theirEphemeralPublicKey);
+			hashInputs[2] = performRawKeyAgreement(ourEphemeralPrivateKey,
+					theirStaticPublicKey);
+		} else {
+			hashInputs[1] = performRawKeyAgreement(ourEphemeralPrivateKey,
+					theirStaticPublicKey);
+			hashInputs[2] = performRawKeyAgreement(ourStaticPrivateKey,
+					theirEphemeralPublicKey);
+		}
+		arraycopy(inputs, 0, hashInputs, 3, inputs.length);
+		byte[] hash = hash(label, hashInputs);
+		if (hash.length != SecretKey.LENGTH) throw new IllegalStateException();
+		return new SecretKey(hash);
+	}
+
+	@Override
+	public SecretKey deriveSharedSecret(String label,
+			PublicKey theirStaticPublicKey, PublicKey theirEphemeralPublicKey,
+			KeyPair ourStaticKeyPair, KeyPair ourEphemeralKeyPair,
+			boolean alice, byte[]... inputs) throws GeneralSecurityException {
+		PrivateKey ourStaticPrivateKey = ourStaticKeyPair.getPrivate();
+		PrivateKey ourEphemeralPrivateKey = ourEphemeralKeyPair.getPrivate();
+		byte[][] hashInputs = new byte[inputs.length + 3][];
+		// Alice ephemeral/Bob ephemeral
+		hashInputs[0] = performRawKeyAgreement(ourEphemeralPrivateKey,
+				theirEphemeralPublicKey);
 		// Alice static/Bob ephemeral, Bob static/Alice ephemeral
 		if (alice) {
 			hashInputs[1] = performRawKeyAgreement(ourStaticPrivateKey,
@@ -442,4 +487,21 @@ class CryptoComponentImpl implements CryptoComponent {
 	public String asciiArmour(byte[] b, int lineLength) {
 		return AsciiArmour.wrap(b, lineLength);
 	}
+
+	@Override
+	public String encodeOnion(byte[] publicKey) {
+		Digest digest = new SHA3Digest(256);
+		byte[] label = ".onion checksum".getBytes(US_ASCII);
+		digest.update(label, 0, label.length);
+		digest.update(publicKey, 0, publicKey.length);
+		digest.update(ONION_HS_PROTOCOL_VERSION);
+		byte[] checksum = new byte[digest.getDigestSize()];
+		digest.doFinal(checksum, 0);
+		byte[] address = new byte[publicKey.length + ONION_CHECKSUM_BYTES + 1];
+		arraycopy(publicKey, 0, address, 0, publicKey.length);
+		arraycopy(checksum, 0, address, publicKey.length, ONION_CHECKSUM_BYTES);
+		address[address.length - 1] = ONION_HS_PROTOCOL_VERSION;
+		return Base32.encode(address).toLowerCase(Locale.US);
+	}
+
 }

@@ -7,16 +7,17 @@ import org.briarproject.bramble.api.contact.ContactId;
 import org.briarproject.bramble.api.contact.HandshakeManager;
 import org.briarproject.bramble.api.contact.PendingContactId;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportConnectionReader;
 import org.briarproject.bramble.api.plugin.TransportConnectionWriter;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.plugin.duplex.DuplexTransportConnection;
 import org.briarproject.bramble.api.properties.TransportPropertyManager;
+import org.briarproject.bramble.api.sync.OutgoingSessionRecord;
 import org.briarproject.bramble.api.sync.SyncSessionFactory;
 import org.briarproject.bramble.api.transport.KeyManager;
 import org.briarproject.bramble.api.transport.StreamReaderFactory;
 import org.briarproject.bramble.api.transport.StreamWriterFactory;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.security.SecureRandom;
 import java.util.concurrent.Executor;
@@ -67,7 +68,15 @@ class ConnectionManagerImpl implements ConnectionManager {
 			TransportConnectionReader r) {
 		ioExecutor.execute(new IncomingSimplexSyncConnection(keyManager,
 				connectionRegistry, streamReaderFactory, streamWriterFactory,
-				syncSessionFactory, transportPropertyManager, t, r));
+				syncSessionFactory, transportPropertyManager, t, r, null));
+	}
+
+	@Override
+	public void manageIncomingConnection(TransportId t,
+			TransportConnectionReader r, TagController c) {
+		ioExecutor.execute(new IncomingSimplexSyncConnection(keyManager,
+				connectionRegistry, streamReaderFactory, streamWriterFactory,
+				syncSessionFactory, transportPropertyManager, t, r, c));
 	}
 
 	@Override
@@ -92,7 +101,16 @@ class ConnectionManagerImpl implements ConnectionManager {
 			TransportConnectionWriter w) {
 		ioExecutor.execute(new OutgoingSimplexSyncConnection(keyManager,
 				connectionRegistry, streamReaderFactory, streamWriterFactory,
-				syncSessionFactory, transportPropertyManager, c, t, w));
+				syncSessionFactory, transportPropertyManager, c, t, w, null));
+	}
+
+	@Override
+	public void manageOutgoingConnection(ContactId c, TransportId t,
+			TransportConnectionWriter w, OutgoingSessionRecord sessionRecord) {
+		ioExecutor.execute(new OutgoingSimplexSyncConnection(keyManager,
+				connectionRegistry, streamReaderFactory, streamWriterFactory,
+				syncSessionFactory, transportPropertyManager, c, t, w,
+				sessionRecord));
 	}
 
 	@Override

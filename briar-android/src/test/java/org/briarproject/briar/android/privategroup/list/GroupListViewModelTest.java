@@ -26,7 +26,7 @@ import org.briarproject.briar.api.privategroup.event.GroupDissolvedEvent;
 import org.briarproject.briar.api.privategroup.invitation.GroupInvitationItem;
 import org.briarproject.briar.api.privategroup.invitation.GroupInvitationManager;
 import org.jmock.Expectations;
-import org.jmock.lib.legacy.ClassImposteriser;
+import org.jmock.imposters.ByteBuddyClassImposteriser;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -36,8 +36,8 @@ import java.util.concurrent.Executor;
 
 import androidx.arch.core.executor.testing.InstantTaskExecutorRule;
 
-import static edu.emory.mathcs.backport.java.util.Collections.emptyList;
-import static edu.emory.mathcs.backport.java.util.Collections.singletonList;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static org.briarproject.bramble.test.TestUtils.getAuthor;
 import static org.briarproject.bramble.test.TestUtils.getContact;
 import static org.briarproject.bramble.test.TestUtils.getGroup;
@@ -95,7 +95,7 @@ public class GroupListViewModelTest extends BrambleMockTestCase {
 			new GroupItem(privateGroup2, authorInfo2, groupCount2, false);
 
 	public GroupListViewModelTest() {
-		context.setImposteriser(ClassImposteriser.INSTANCE);
+		context.setImposteriser(ByteBuddyClassImposteriser.INSTANCE);
 		Application app = context.mock(Application.class);
 		context.checking(new Expectations() {{
 			oneOf(eventBus).addListener(with(any(EventListener.class)));

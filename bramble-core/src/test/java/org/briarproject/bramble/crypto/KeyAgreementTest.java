@@ -1,5 +1,6 @@
 package org.briarproject.bramble.crypto;
 
+import org.briarproject.bramble.api.FormatException;
 import org.briarproject.bramble.api.crypto.AgreementPublicKey;
 import org.briarproject.bramble.api.crypto.CryptoComponent;
 import org.briarproject.bramble.api.crypto.KeyPair;
@@ -60,6 +61,22 @@ public class KeyAgreementTest extends BrambleTestCase {
 	}
 
 	@Test
+	public void testDerivesStaticEphemeralSharedSecretBadly() throws Exception {
+		String label = getRandomString(123);
+		KeyPair aStatic = crypto.generateAgreementKeyPair();
+		KeyPair aEphemeral = crypto.generateAgreementKeyPair();
+		KeyPair bStatic = crypto.generateAgreementKeyPair();
+		KeyPair bEphemeral = crypto.generateAgreementKeyPair();
+		SecretKey aShared = crypto.deriveSharedSecretBadly(label,
+				bStatic.getPublic(), bEphemeral.getPublic(), aStatic,
+				aEphemeral, true, inputs);
+		SecretKey bShared = crypto.deriveSharedSecretBadly(label,
+				aStatic.getPublic(), aEphemeral.getPublic(), bStatic,
+				bEphemeral, false, inputs);
+		assertArrayEquals(aShared.getBytes(), bShared.getBytes());
+	}
+
+	@Test
 	public void testDerivesStaticEphemeralSharedSecret() throws Exception {
 		String label = getRandomString(123);
 		KeyPair aStatic = crypto.generateAgreementKeyPair();
@@ -83,7 +100,7 @@ public class KeyAgreementTest extends BrambleTestCase {
 	}
 
 	@Test
-	public void testRfc7748TestVector() {
+	public void testRfc7748TestVector() throws FormatException {
 		byte[] aPriv = parsePrivateKey(ALICE_PRIVATE);
 		byte[] aPub = fromHexString(ALICE_PUBLIC);
 		byte[] bPriv = parsePrivateKey(BOB_PRIVATE);
@@ -97,7 +114,8 @@ public class KeyAgreementTest extends BrambleTestCase {
 	}
 
 	@Test
-	public void testDerivesSameSharedSecretFromEquivalentPublicKey() {
+	public void testDerivesSameSharedSecretFromEquivalentPublicKey()
+			throws FormatException {
 		byte[] aPub = fromHexString(ALICE_PUBLIC);
 		byte[] bPriv = parsePrivateKey(BOB_PRIVATE);
 		byte[] sharedSecret = fromHexString(SHARED_SECRET);
@@ -168,7 +186,7 @@ public class KeyAgreementTest extends BrambleTestCase {
 		return crypto.deriveSharedSecret(label, publicKey, keyPair, inputs);
 	}
 
-	private byte[] parsePrivateKey(String hex) {
+	private byte[] parsePrivateKey(String hex) throws FormatException {
 		// Private keys need to be clamped because curve25519-java does the
 		// clamping at key generation time, not multiplication time
 		return AgreementKeyParser.clamp(fromHexString(hex));

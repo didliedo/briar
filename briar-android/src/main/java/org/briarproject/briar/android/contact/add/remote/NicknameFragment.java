@@ -8,8 +8,6 @@ import android.text.Editable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.android.material.textfield.TextInputEditText;
@@ -20,11 +18,12 @@ import org.briarproject.bramble.api.contact.PendingContact;
 import org.briarproject.bramble.api.db.ContactExistsException;
 import org.briarproject.bramble.api.db.PendingContactExistsException;
 import org.briarproject.bramble.api.identity.Author;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.fragment.BaseFragment;
+import org.briarproject.briar.android.view.BriarButton;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -35,13 +34,12 @@ import androidx.appcompat.app.AlertDialog.Builder;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.ViewModelProvider;
 
-import static android.view.View.INVISIBLE;
-import static android.view.View.VISIBLE;
 import static android.widget.Toast.LENGTH_LONG;
 import static java.util.Objects.requireNonNull;
 import static org.briarproject.bramble.api.identity.AuthorConstants.MAX_AUTHOR_NAME_LENGTH;
 import static org.briarproject.bramble.util.StringUtils.utf8IsTooLong;
 import static org.briarproject.briar.android.util.UiUtils.getDialogIcon;
+import static org.briarproject.briar.android.util.UiUtils.hideViewOnSmallScreen;
 
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
@@ -57,8 +55,6 @@ public class NicknameFragment extends BaseFragment {
 
 	private TextInputLayout contactNameLayout;
 	private TextInputEditText contactNameInput;
-	private Button addButton;
-	private ProgressBar progressBar;
 
 	@Override
 	public String getUniqueTag() {
@@ -95,12 +91,16 @@ public class NicknameFragment extends BaseFragment {
 		contactNameLayout = v.findViewById(R.id.contactNameLayout);
 		contactNameInput = v.findViewById(R.id.contactNameInput);
 
-		addButton = v.findViewById(R.id.addButton);
+		BriarButton addButton = v.findViewById(R.id.addButton);
 		addButton.setOnClickListener(view -> onAddButtonClicked());
 
-		progressBar = v.findViewById(R.id.progressBar);
-
 		return v;
+	}
+
+	@Override
+	public void onStart() {
+		super.onStart();
+		hideViewOnSmallScreen(requireView().findViewById(R.id.imageView));
 	}
 
 	@Override
@@ -130,9 +130,6 @@ public class NicknameFragment extends BaseFragment {
 	private void onAddButtonClicked() {
 		String name = getNicknameOrNull();
 		if (name == null) return;  // invalid nickname
-
-		addButton.setVisibility(INVISIBLE);
-		progressBar.setVisibility(VISIBLE);
 
 		LifecycleOwner owner = getViewLifecycleOwner();
 		viewModel.getAddContactResult().observe(owner, result -> {
@@ -174,7 +171,7 @@ public class NicknameFragment extends BaseFragment {
 	private void handleExistingContact(String name, Author existing) {
 		OnClickListener listener = (d, w) -> {
 			d.dismiss();
-			String str = getString(R.string.contact_already_exists, name);
+			String str = getString(R.string.contact_already_exists_general);
 			Toast.makeText(getContext(), str, LENGTH_LONG).show();
 			finish();
 		};

@@ -1,8 +1,8 @@
 package org.briarproject.bramble.util;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.bramble.api.FormatException;
+import org.briarproject.nullsafety.NotNullByDefault;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
@@ -14,15 +14,21 @@ import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 import static java.nio.charset.CodingErrorAction.IGNORE;
+import static java.nio.charset.CodingErrorAction.REPORT;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 
+@SuppressWarnings("CharsetObjectCanBeUsed")
 @NotNullByDefault
 public class StringUtils {
 
-	private static final Charset UTF_8 = Charset.forName("UTF-8");
-	private static Pattern MAC = Pattern.compile("[0-9a-f]{2}:[0-9a-f]{2}:" +
-					"[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}",
-			CASE_INSENSITIVE);
+	public static final Charset UTF_8 = Charset.forName("UTF-8");
+	public static final Charset US_ASCII = Charset.forName("US-ASCII");
+	public static final Charset ISO_8859_1 = Charset.forName("ISO-8859-1");
+
+	private static final Pattern MAC =
+			Pattern.compile("[0-9a-f]{2}:[0-9a-f]{2}:" +
+							"[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}:[0-9a-f]{2}",
+					CASE_INSENSITIVE);
 
 	private static final char[] HEX = new char[] {
 			'0', '1', '2', '3', '4', '5', '6', '7',
@@ -44,33 +50,41 @@ public class StringUtils {
 	}
 
 	public static byte[] toUtf8(String s) {
-		try {
-			return s.getBytes("UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			throw new AssertionError(e);
-		}
+		return s.getBytes(UTF_8);
 	}
 
-	public static String fromUtf8(byte[] bytes) {
-		return fromUtf8(bytes, 0, bytes.length);
+	public static String fromUtf8(byte[] bytes) throws FormatException {
+		return fromUtf8(bytes, 0, bytes.length, true);
 	}
 
-	public static String fromUtf8(byte[] bytes, int off, int len) {
+	public static String fromUtf8(byte[] bytes, int off, int len)
+			throws FormatException {
+		return fromUtf8(bytes, off, len, true);
+	}
+
+	private static String fromUtf8(byte[] bytes, int off, int len,
+			boolean strict) throws FormatException {
 		CharsetDecoder decoder = UTF_8.newDecoder();
-		decoder.onMalformedInput(IGNORE);
-		decoder.onUnmappableCharacter(IGNORE);
+		decoder.onMalformedInput(strict ? REPORT : IGNORE);
+		decoder.onUnmappableCharacter(strict ? REPORT : IGNORE);
 		ByteBuffer buffer = ByteBuffer.wrap(bytes, off, len);
 		try {
 			return decoder.decode(buffer).toString();
 		} catch (CharacterCodingException e) {
-			throw new AssertionError(e);
+			throw new FormatException();
 		}
 	}
 
 	public static String truncateUtf8(String s, int maxUtf8Length) {
 		byte[] utf8 = toUtf8(s);
 		if (utf8.length <= maxUtf8Length) return s;
-		return fromUtf8(utf8, 0, maxUtf8Length);
+		// Don't be strict when converting back, so that if we truncate a
+		// multi-byte character the whole character gets dropped
+		try {
+			return fromUtf8(utf8, 0, maxUtf8Length, false);
+		} catch (FormatException e) {
+			throw new AssertionError(e);
+		}
 	}
 
 	/**
@@ -95,10 +109,10 @@ public class StringUtils {
 	/**
 	 * Converts the given hex string to a byte array.
 	 */
-	public static byte[] fromHexString(String hex) {
+	public static byte[] fromHexString(String hex) throws FormatException {
 		int len = hex.length();
 		if (len % 2 != 0)
-			throw new IllegalArgumentException("Not a hex string");
+			throw new FormatException();
 		byte[] bytes = new byte[len / 2];
 		for (int i = 0, j = 0; i < len; i += 2, j++) {
 			int high = hexDigitToInt(hex.charAt(i));
@@ -108,11 +122,11 @@ public class StringUtils {
 		return bytes;
 	}
 
-	private static int hexDigitToInt(char c) {
+	private static int hexDigitToInt(char c) throws FormatException {
 		if (c >= '0' && c <= '9') return c - '0';
 		if (c >= 'A' && c <= 'F') return c - 'A' + 10;
 		if (c >= 'a' && c <= 'f') return c - 'a' + 10;
-		throw new IllegalArgumentException("Not a hex digit: " + c);
+		throw new FormatException();
 	}
 
 	public static String trim(String s) {
@@ -130,13 +144,13 @@ public class StringUtils {
 		return MAC.matcher(mac).matches();
 	}
 
-	public static byte[] macToBytes(String mac) {
-		if (!MAC.matcher(mac).matches()) throw new IllegalArgumentException();
+	public static byte[] macToBytes(String mac) throws FormatException {
+		if (!MAC.matcher(mac).matches()) throw new FormatException();
 		return fromHexString(mac.replaceAll(":", ""));
 	}
 
-	public static String macToString(byte[] mac) {
-		if (mac.length != 6) throw new IllegalArgumentException();
+	public static String macToString(byte[] mac) throws FormatException {
+		if (mac.length != 6) throw new FormatException();
 		StringBuilder s = new StringBuilder();
 		for (byte b : mac) {
 			if (s.length() > 0) s.append(':');
@@ -161,5 +175,10 @@ public class StringUtils {
 			else c[i] = (char) ('2' + (character - 26));
 		}
 		return new String(c);
+	}
+
+	// see https://stackoverflow.com/a/38947571
+	static boolean startsWithIgnoreCase(String s, String prefix) {
+		return s.regionMatches(true, 0, prefix, 0, prefix.length());
 	}
 }

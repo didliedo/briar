@@ -4,12 +4,13 @@ import org.briarproject.bramble.api.contact.Contact;
 import org.briarproject.bramble.api.contact.ContactId;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.GroupId;
+import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.briar.api.client.MessageTracker.GroupCount;
 import org.briarproject.briar.api.messaging.MessagingManager;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.Collection;
 import java.util.Set;
@@ -38,6 +39,15 @@ public interface ConversationManager {
 			throws DbException;
 
 	/**
+	 * Returns the headers of all messages in the given private conversation.
+	 * <p>
+	 * Only {@link MessagingManager} returns only headers.
+	 * The others also return the message text.
+	 */
+	Collection<ConversationMessageHeader> getMessageHeaders(Transaction txn, ContactId c)
+			throws DbException;
+
+	/**
 	 * Returns the unified group count for all private conversation messages.
 	 */
 	GroupCount getGroupCount(ContactId c) throws DbException;
@@ -47,7 +57,31 @@ public interface ConversationManager {
 	 */
 	GroupCount getGroupCount(Transaction txn, ContactId c) throws DbException;
 
+	/**
+	 * Updates the group count for the given incoming private conversation message
+	 * and broadcasts a corresponding event.
+	 */
+	void trackIncomingMessage(Transaction txn, Message m)
+			throws DbException;
+
+	/**
+	 * Updates the group count for the given outgoing private conversation message
+	 * and broadcasts a corresponding event.
+	 */
+	void trackOutgoingMessage(Transaction txn, Message m)
+			throws DbException;
+
+	/**
+	 * Updates the group count for the given private conversation message
+	 * and broadcasts a corresponding event.
+	 */
+	void trackMessage(Transaction txn, GroupId g, long timestamp, boolean read)
+			throws DbException;
+
 	void setReadFlag(GroupId g, MessageId m, boolean read)
+			throws DbException;
+
+	void setReadFlag(Transaction txn, GroupId g, MessageId m, boolean read)
 			throws DbException;
 
 	/**
@@ -63,10 +97,22 @@ public interface ConversationManager {
 	DeletionResult deleteAllMessages(ContactId c) throws DbException;
 
 	/**
+	 * Deletes all messages exchanged with the given contact.
+	 */
+	DeletionResult deleteAllMessages(Transaction txn, ContactId c)
+			throws DbException;
+
+	/**
 	 * Deletes the given set of messages associated with the given contact.
 	 */
 	DeletionResult deleteMessages(ContactId c, Collection<MessageId> messageIds)
 			throws DbException;
+
+	/**
+	 * Deletes the given set of messages associated with the given contact.
+	 */
+	DeletionResult deleteMessages(Transaction txn, ContactId c,
+			Collection<MessageId> messageIds) throws DbException;
 
 	@NotNullByDefault
 	interface ConversationClient {

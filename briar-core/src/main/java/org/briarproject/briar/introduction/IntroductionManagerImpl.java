@@ -20,7 +20,6 @@ import org.briarproject.bramble.api.identity.AuthorId;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.identity.LocalAuthor;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager.OpenDatabaseHook;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Group.Visibility;
 import org.briarproject.bramble.api.sync.GroupId;
@@ -42,6 +41,7 @@ import org.briarproject.briar.api.introduction.IntroductionResponse;
 import org.briarproject.briar.api.introduction.Role;
 import org.briarproject.briar.client.ConversationClientImpl;
 import org.briarproject.briar.introduction.IntroducerSession.Introducee;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -56,6 +56,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_DO_NOT_SHARE;
 import static org.briarproject.briar.api.autodelete.AutoDeleteConstants.NO_AUTO_DELETE_TIMER;
 import static org.briarproject.briar.api.introduction.Role.INTRODUCEE;
 import static org.briarproject.briar.api.introduction.Role.INTRODUCER;
@@ -171,8 +172,9 @@ class IntroductionManagerImpl extends ConversationClientImpl
 	}
 
 	@Override
-	protected boolean incomingMessage(Transaction txn, Message m, BdfList body,
-			BdfDictionary bdfMeta) throws DbException, FormatException {
+	protected DeliveryAction incomingMessage(Transaction txn, Message m,
+			BdfList body, BdfDictionary bdfMeta)
+			throws DbException, FormatException {
 		// Parse the metadata
 		MessageMetadata meta = messageParser.parseMetadata(bdfMeta);
 		// set the clean-up timer that will be started when message gets read
@@ -213,7 +215,7 @@ class IntroductionManagerImpl extends ConversationClientImpl
 		}
 		// Store the updated session
 		storeSession(txn, storageId, session);
-		return false;
+		return ACCEPT_DO_NOT_SHARE;
 	}
 
 	private IntroduceeSession createNewIntroduceeSession(Transaction txn,
@@ -298,36 +300,37 @@ class IntroductionManagerImpl extends ConversationClientImpl
 
 	@Override
 	public boolean canIntroduce(Contact c1, Contact c2) throws DbException {
-		Transaction txn = db.startTransaction(true);
+		return db.transactionWithResult(true,
+				txn -> canIntroduce(txn, c1, c2));
+	}
+
+	public boolean canIntroduce(Transaction txn, Contact c1, Contact c2)
+			throws DbException {
 		try {
-			boolean can = canIntroduce(txn, c1, c2);
-			db.commitTransaction(txn);
-			return can;
+			// Look up the session, if there is one
+			Author introducer = identityManager.getLocalAuthor(txn);
+			SessionId sessionId =
+					crypto.getSessionId(introducer, c1.getAuthor(),
+							c2.getAuthor());
+			StoredSession ss = getSession(txn, sessionId);
+			if (ss == null) return true;
+			IntroducerSession session =
+					sessionParser.parseIntroducerSession(ss.bdfSession);
+			return session.getState().isComplete();
 		} catch (FormatException e) {
 			throw new DbException(e);
-		} finally {
-			db.endTransaction(txn);
 		}
 	}
 
-	private boolean canIntroduce(Transaction txn, Contact c1, Contact c2)
-			throws DbException, FormatException {
-		// Look up the session, if there is one
-		Author introducer = identityManager.getLocalAuthor(txn);
-		SessionId sessionId =
-				crypto.getSessionId(introducer, c1.getAuthor(),
-						c2.getAuthor());
-		StoredSession ss = getSession(txn, sessionId);
-		if (ss == null) return true;
-		IntroducerSession session =
-				sessionParser.parseIntroducerSession(ss.bdfSession);
-		return session.getState().isComplete();
+	public void makeIntroduction(Contact c1, Contact c2, @Nullable String text)
+			throws DbException {
+		db.transaction(false,
+				txn -> makeIntroduction(txn, c1, c2, text));
 	}
 
 	@Override
-	public void makeIntroduction(Contact c1, Contact c2, @Nullable String text)
-			throws DbException {
-		Transaction txn = db.startTransaction(false);
+	public void makeIntroduction(Transaction txn, Contact c1, Contact c2,
+			@Nullable String text) throws DbException {
 		try {
 			// Look up the session, if there is one
 			Author introducer = identityManager.getLocalAuthor(txn);
@@ -361,11 +364,8 @@ class IntroductionManagerImpl extends ConversationClientImpl
 			session = introducerEngine.onRequestAction(txn, session, text);
 			// Store the updated session
 			storeSession(txn, storageId, session);
-			db.commitTransaction(txn);
 		} catch (FormatException e) {
 			throw new DbException(e);
-		} finally {
-			db.endTransaction(txn);
 		}
 	}
 
@@ -373,6 +373,12 @@ class IntroductionManagerImpl extends ConversationClientImpl
 	public void respondToIntroduction(ContactId contactId, SessionId sessionId,
 			boolean accept) throws DbException {
 		respondToIntroduction(contactId, sessionId, accept, false);
+	}
+
+	@Override
+	public void respondToIntroduction(Transaction txn, ContactId contactId,
+			SessionId sessionId, boolean accept) throws DbException {
+		respondToIntroduction(txn, contactId, sessionId, accept, false);
 	}
 
 	private void respondToIntroduction(ContactId contactId, SessionId sessionId,

@@ -1,6 +1,7 @@
 package org.briarproject.bramble.client;
 
 import org.briarproject.bramble.api.FormatException;
+import org.briarproject.bramble.api.UniqueId;
 import org.briarproject.bramble.api.client.ClientHelper;
 import org.briarproject.bramble.api.contact.ContactId;
 import org.briarproject.bramble.api.crypto.CryptoComponent;
@@ -22,30 +23,46 @@ import org.briarproject.bramble.api.db.Metadata;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.identity.Author;
 import org.briarproject.bramble.api.identity.AuthorFactory;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.bramble.api.mailbox.MailboxAuthToken;
+import org.briarproject.bramble.api.mailbox.MailboxFolderId;
+import org.briarproject.bramble.api.mailbox.MailboxProperties;
+import org.briarproject.bramble.api.mailbox.MailboxUpdate;
+import org.briarproject.bramble.api.mailbox.MailboxUpdateWithMailbox;
+import org.briarproject.bramble.api.mailbox.MailboxVersion;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageFactory;
 import org.briarproject.bramble.api.sync.MessageId;
+import org.briarproject.bramble.util.Base32;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 
+import static java.util.Collections.sort;
 import static org.briarproject.bramble.api.client.ContactGroupConstants.GROUP_KEY_CONTACT_ID;
 import static org.briarproject.bramble.api.identity.Author.FORMAT_VERSION;
 import static org.briarproject.bramble.api.identity.AuthorConstants.MAX_AUTHOR_NAME_LENGTH;
 import static org.briarproject.bramble.api.identity.AuthorConstants.MAX_PUBLIC_KEY_LENGTH;
+import static org.briarproject.bramble.api.mailbox.MailboxUpdateManager.PROP_COUNT;
+import static org.briarproject.bramble.api.mailbox.MailboxUpdateManager.PROP_KEY_AUTHTOKEN;
+import static org.briarproject.bramble.api.mailbox.MailboxUpdateManager.PROP_KEY_INBOXID;
+import static org.briarproject.bramble.api.mailbox.MailboxUpdateManager.PROP_KEY_ONION;
+import static org.briarproject.bramble.api.mailbox.MailboxUpdateManager.PROP_KEY_OUTBOXID;
+import static org.briarproject.bramble.api.mailbox.MailboxUpdateManager.PROP_ONION_LENGTH;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MAX_PROPERTIES_PER_TRANSPORT;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MAX_PROPERTY_LENGTH;
 import static org.briarproject.bramble.util.ValidationUtils.checkLength;
@@ -138,7 +155,13 @@ class ClientHelperImpl implements ClientHelper {
 	@Override
 	public BdfList getMessageAsList(Transaction txn, MessageId m)
 			throws DbException, FormatException {
-		return toList(db.getMessage(txn, m).getBody());
+		return getMessageAsList(txn, m, true);
+	}
+
+	@Override
+	public BdfList getMessageAsList(Transaction txn, MessageId m,
+			boolean canonical) throws DbException, FormatException {
+		return toList(db.getMessage(txn, m), canonical);
 	}
 
 	@Override
@@ -296,8 +319,13 @@ class ClientHelperImpl implements ClientHelper {
 
 	@Override
 	public BdfList toList(byte[] b, int off, int len) throws FormatException {
+		return toList(b, off, len, true);
+	}
+
+	private BdfList toList(byte[] b, int off, int len, boolean canonical)
+			throws FormatException {
 		ByteArrayInputStream in = new ByteArrayInputStream(b, off, len);
-		BdfReader reader = bdfReaderFactory.createReader(in);
+		BdfReader reader = bdfReaderFactory.createReader(in, canonical);
 		try {
 			BdfList list = reader.readList();
 			if (!reader.eof()) throw new FormatException();
@@ -311,12 +339,18 @@ class ClientHelperImpl implements ClientHelper {
 
 	@Override
 	public BdfList toList(byte[] b) throws FormatException {
-		return toList(b, 0, b.length);
+		return toList(b, 0, b.length, true);
 	}
 
 	@Override
 	public BdfList toList(Message m) throws FormatException {
 		return toList(m.getBody());
+	}
+
+	@Override
+	public BdfList toList(Message m, boolean canonical) throws FormatException {
+		byte[] b = m.getBody();
+		return toList(b, 0, b.length, canonical);
 	}
 
 	@Override
@@ -344,7 +378,7 @@ class ClientHelperImpl implements ClientHelper {
 	public Author parseAndValidateAuthor(BdfList author)
 			throws FormatException {
 		checkSize(author, 3);
-		int formatVersion = author.getLong(0).intValue();
+		int formatVersion = author.getInt(0);
 		if (formatVersion != FORMAT_VERSION) throw new FormatException();
 		String name = author.getString(1);
 		checkLength(name, 1, MAX_AUTHOR_NAME_LENGTH);
@@ -400,12 +434,75 @@ class ClientHelperImpl implements ClientHelper {
 	}
 
 	@Override
+	public MailboxUpdate parseAndValidateMailboxUpdate(BdfList clientSupports,
+			BdfList serverSupports, BdfDictionary properties)
+			throws FormatException {
+		List<MailboxVersion> clientSupportsList =
+				parseMailboxVersionList(clientSupports);
+		List<MailboxVersion> serverSupportsList =
+				parseMailboxVersionList(serverSupports);
+
+		// We must always learn what Mailbox API version(s) the client supports
+		if (clientSupports.isEmpty()) {
+			throw new FormatException();
+		}
+		if (properties.isEmpty()) {
+			// No mailbox -- cannot claim to support any API versions!
+			if (!serverSupports.isEmpty()) {
+				throw new FormatException();
+			}
+			return new MailboxUpdate(clientSupportsList);
+		}
+		// Mailbox must be accompanied by the Mailbox API version(s) it supports
+		if (serverSupports.isEmpty()) {
+			throw new FormatException();
+		}
+		// Accepting more props than we need, for forward compatibility
+		if (properties.size() < PROP_COUNT) {
+			throw new FormatException();
+		}
+		String onion = properties.getString(PROP_KEY_ONION);
+		checkLength(onion, PROP_ONION_LENGTH);
+		try {
+			Base32.decode(onion, true);
+		} catch (IllegalArgumentException e) {
+			throw new FormatException();
+		}
+		byte[] authToken = properties.getRaw(PROP_KEY_AUTHTOKEN);
+		checkLength(authToken, UniqueId.LENGTH);
+		byte[] inboxId = properties.getRaw(PROP_KEY_INBOXID);
+		checkLength(inboxId, UniqueId.LENGTH);
+		byte[] outboxId = properties.getRaw(PROP_KEY_OUTBOXID);
+		checkLength(outboxId, UniqueId.LENGTH);
+		MailboxProperties props = new MailboxProperties(onion,
+				new MailboxAuthToken(authToken), serverSupportsList,
+				new MailboxFolderId(inboxId), new MailboxFolderId(outboxId));
+		return new MailboxUpdateWithMailbox(clientSupportsList, props);
+	}
+
+	@Override
+	public List<MailboxVersion> parseMailboxVersionList(BdfList bdfList)
+			throws FormatException {
+		List<MailboxVersion> list = new ArrayList<>();
+		for (int i = 0; i < bdfList.size(); i++) {
+			BdfList element = bdfList.getList(i);
+			if (element.size() != 2) {
+				throw new FormatException();
+			}
+			list.add(new MailboxVersion(element.getInt(0), element.getInt(1)));
+		}
+		// Sort the list of versions for easier comparison
+		sort(list);
+		return list;
+	}
+
+	@Override
 	public ContactId getContactId(Transaction txn, GroupId contactGroupId)
 			throws DbException {
 		try {
 			BdfDictionary meta =
 					getGroupMetadataAsDictionary(txn, contactGroupId);
-			return new ContactId(meta.getLong(GROUP_KEY_CONTACT_ID).intValue());
+			return new ContactId(meta.getInt(GROUP_KEY_CONTACT_ID));
 		} catch (FormatException e) {
 			throw new DbException(e); // Invalid group metadata
 		}

@@ -11,9 +11,6 @@ import org.briarproject.bramble.api.keyagreement.KeyAgreementListener;
 import org.briarproject.bramble.api.keyagreement.event.KeyAgreementListeningEvent;
 import org.briarproject.bramble.api.keyagreement.event.KeyAgreementStoppedListeningEvent;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.plugin.Backoff;
 import org.briarproject.bramble.api.plugin.ConnectionHandler;
 import org.briarproject.bramble.api.plugin.PluginCallback;
@@ -26,6 +23,9 @@ import org.briarproject.bramble.api.rendezvous.KeyMaterialSource;
 import org.briarproject.bramble.api.rendezvous.RendezvousEndpoint;
 import org.briarproject.bramble.api.settings.Settings;
 import org.briarproject.bramble.api.settings.event.SettingsUpdatedEvent;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -79,7 +79,8 @@ abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 	private final SecureRandom secureRandom;
 	private final Backoff backoff;
 	private final PluginCallback callback;
-	private final int maxLatency, maxIdleTime;
+	private final long maxLatency;
+	private final int maxIdleTime;
 	private final AtomicBoolean used = new AtomicBoolean(false);
 	private final AtomicBoolean everConnected = new AtomicBoolean(false);
 
@@ -87,6 +88,17 @@ abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 	protected final Semaphore discoverSemaphore = new Semaphore(1);
 
 	private volatile String contactConnectionsUuid = null;
+
+	/**
+	 * Override and return true, if the plugin is now allowed to access the
+	 * Bluetooth hardware.
+	 * If this returns false, the plugin must be
+	 * {@link org.briarproject.bramble.api.plugin.Plugin.State#DISABLED}
+	 * in {@link #start()} and not attempt to access Bluetooth hardware.
+	 */
+	protected boolean isBluetoothAccessible() {
+		return true;
+	}
 
 	abstract void initialiseAdapter() throws IOException;
 
@@ -121,7 +133,7 @@ abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 			SecureRandom secureRandom,
 			Backoff backoff,
 			PluginCallback callback,
-			int maxLatency,
+			long maxLatency,
 			int maxIdleTime) {
 		this.connectionLimiter = connectionLimiter;
 		this.connectionFactory = connectionFactory;
@@ -158,7 +170,7 @@ abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 	}
 
 	@Override
-	public int getMaxLatency() {
+	public long getMaxLatency() {
 		return maxLatency;
 	}
 
@@ -175,19 +187,28 @@ abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 				DEFAULT_PREF_PLUGIN_ENABLE);
 		everConnected.set(settings.getBoolean(PREF_EVER_CONNECTED,
 				DEFAULT_PREF_EVER_CONNECTED));
+		// disable plugin, if conditions for enabling are not met
+		if (enabledByUser && !isBluetoothAccessible()) {
+			enabledByUser = false;
+			settings.putBoolean(PREF_PLUGIN_ENABLE, false);
+			callback.mergeSettings(settings);
+		}
 		state.setStarted(enabledByUser);
 		try {
 			initialiseAdapter();
 		} catch (IOException e) {
 			throw new PluginException(e);
 		}
-		updateProperties();
-		if (enabledByUser && isAdapterEnabled()) bind();
+		if (enabledByUser) {
+			updateProperties();
+			if (isAdapterEnabled()) bind();
+		}
 	}
 
 	private void bind() {
 		ioExecutor.execute(() -> {
 			if (getState() != INACTIVE) return;
+			if (contactConnectionsUuid == null) updateProperties();
 			// Bind a server socket to accept connections from contacts
 			SS ss;
 			try {
@@ -426,7 +447,13 @@ abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 		BdfList descriptor = new BdfList();
 		descriptor.add(TRANSPORT_ID_BLUETOOTH);
 		String address = getBluetoothAddress();
-		if (address != null) descriptor.add(macToBytes(address));
+		if (address != null) {
+			try {
+				descriptor.add(macToBytes(address));
+			} catch (FormatException e) {
+				throw new RuntimeException();
+			}
+		}
 		return new BluetoothKeyAgreementListener(descriptor, ss);
 	}
 
@@ -527,7 +554,8 @@ abstract class AbstractBluetoothPlugin<S, SS> implements BluetoothPlugin,
 	private void onSettingsUpdated(Settings settings) {
 		boolean enabledByUser = settings.getBoolean(PREF_PLUGIN_ENABLE,
 				DEFAULT_PREF_PLUGIN_ENABLE);
-		SS ss = state.setEnabledByUser(enabledByUser);
+		boolean shouldEnable = enabledByUser && isBluetoothAccessible();
+		SS ss = state.setEnabledByUser(shouldEnable);
 		State s = getState();
 		if (ss != null) {
 			LOG.info("Disabled by user, closing server socket");

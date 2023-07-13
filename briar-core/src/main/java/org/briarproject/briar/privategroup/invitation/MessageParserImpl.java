@@ -8,12 +8,12 @@ import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.identity.Author;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.briar.api.privategroup.PrivateGroup;
 import org.briarproject.briar.api.privategroup.PrivateGroupFactory;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
@@ -71,8 +71,8 @@ class MessageParserImpl implements MessageParser {
 	@Override
 	public MessageMetadata parseMetadata(BdfDictionary meta)
 			throws FormatException {
-		MessageType type = MessageType.fromValue(
-				meta.getLong(MSG_KEY_MESSAGE_TYPE).intValue());
+		MessageType type =
+				MessageType.fromValue(meta.getInt(MSG_KEY_MESSAGE_TYPE));
 		GroupId privateGroupId =
 				new GroupId(meta.getRaw(MSG_KEY_PRIVATE_GROUP_ID));
 		long timestamp = meta.getLong(MSG_KEY_TIMESTAMP);

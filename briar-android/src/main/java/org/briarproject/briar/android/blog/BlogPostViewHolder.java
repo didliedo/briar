@@ -3,18 +3,19 @@ package org.briarproject.briar.android.blog;
 import android.content.Context;
 import android.content.Intent;
 import android.text.Spanned;
+import android.text.util.Linkify;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.view.AuthorView;
 import org.briarproject.briar.api.blog.BlogCommentHeader;
 import org.briarproject.briar.api.blog.BlogPostHeader;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import androidx.annotation.UiThread;
 import androidx.core.view.ViewCompat;
@@ -44,6 +45,7 @@ class BlogPostViewHolder extends RecyclerView.ViewHolder {
 	private final TextView text;
 	private final ViewGroup commentContainer;
 	private final boolean fullText, authorClickable;
+	private final int padding;
 
 	private final OnBlogPostClickListener listener;
 
@@ -61,6 +63,8 @@ class BlogPostViewHolder extends RecyclerView.ViewHolder {
 		reblogButton = v.findViewById(R.id.commentView);
 		text = v.findViewById(R.id.textView);
 		commentContainer = v.findViewById(R.id.commentContainer);
+		padding = ctx.getResources()
+				.getDimensionPixelSize(R.dimen.listitem_vertical_margin);
 	}
 
 	void hideReblogButton() {
@@ -160,7 +164,12 @@ class BlogPostViewHolder extends RecyclerView.ViewHolder {
 			// TODO make author clickable #624
 
 			text.setText(c.getComment());
-			if (fullText) text.setTextIsSelectable(true);
+			Linkify.addLinks(text, Linkify.WEB_URLS);
+			text.setMovementMethod(null);
+			if (fullText) {
+				text.setTextIsSelectable(true);
+				makeLinksClickable(text, listener::onLinkClick);
+			}
 
 			commentContainer.addView(v);
 		}

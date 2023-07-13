@@ -7,12 +7,12 @@ import android.os.Handler;
 import android.transition.Fade;
 
 import org.briarproject.bramble.api.account.AccountManager;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.system.AndroidExecutor;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.activity.BaseActivity;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.logging.Logger;
 
@@ -21,12 +21,12 @@ import javax.inject.Inject;
 
 import static android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP;
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
-import static android.os.Build.VERSION.SDK_INT;
 import static androidx.preference.PreferenceManager.setDefaultValues;
 import static java.lang.System.currentTimeMillis;
 import static java.util.logging.Logger.getLogger;
 import static org.briarproject.briar.android.BriarApplication.ENTRY_ACTIVITY;
 import static org.briarproject.briar.android.TestingConstants.EXPIRY_DATE;
+import static org.briarproject.briar.android.TestingConstants.IS_DEBUG_BUILD;
 
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
@@ -49,12 +49,8 @@ public class SplashScreenActivity extends BaseActivity {
 	public void onCreate(@Nullable Bundle state) {
 		super.onCreate(state);
 
-		if (SDK_INT >= 21) {
-			getWindow().setExitTransition(new Fade());
-		}
-
+		getWindow().setExitTransition(new Fade());
 		setPreferencesDefaults();
-
 		setContentView(R.layout.splash);
 
 		if (accountManager.hasDatabaseKey()) {
@@ -64,7 +60,7 @@ public class SplashScreenActivity extends BaseActivity {
 			int duration =
 					getResources().getInteger(R.integer.splashScreenDuration);
 			new Handler().postDelayed(() -> {
-				if (currentTimeMillis() >= EXPIRY_DATE) {
+				if (IS_DEBUG_BUILD && currentTimeMillis() >= EXPIRY_DATE) {
 					LOG.info("Expired");
 					startNextActivity(ExpiredActivity.class);
 				} else {

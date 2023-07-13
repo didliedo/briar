@@ -9,9 +9,9 @@ import org.briarproject.bramble.api.db.DbRunnable;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.db.TransactionManager;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.system.AndroidExecutor;
 import org.briarproject.briar.android.util.UiUtils;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -23,7 +23,6 @@ import java.util.logging.Logger;
 import javax.annotation.concurrent.Immutable;
 
 import androidx.annotation.AnyThread;
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.UiThread;
 import androidx.arch.core.util.Function;
@@ -45,12 +44,12 @@ public abstract class DbViewModel extends AndroidViewModel {
 
 	@DatabaseExecutor
 	private final Executor dbExecutor;
-	private final LifecycleManager lifecycleManager;
+	protected final LifecycleManager lifecycleManager;
 	private final TransactionManager db;
 	protected final AndroidExecutor androidExecutor;
 
 	public DbViewModel(
-			@NonNull Application application,
+			Application application,
 			@DatabaseExecutor Executor dbExecutor,
 			LifecycleManager lifecycleManager,
 			TransactionManager db,

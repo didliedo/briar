@@ -12,7 +12,6 @@ import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.identity.Author;
 import org.briarproject.bramble.api.identity.AuthorId;
 import org.briarproject.bramble.api.identity.LocalAuthor;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.Message;
@@ -28,6 +27,7 @@ import org.briarproject.briar.api.forum.ForumPostHeader;
 import org.briarproject.briar.api.forum.event.ForumPostReceivedEvent;
 import org.briarproject.briar.api.identity.AuthorInfo;
 import org.briarproject.briar.api.identity.AuthorManager;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -45,6 +45,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_SHARE;
 import static org.briarproject.briar.api.forum.ForumConstants.KEY_AUTHOR;
 import static org.briarproject.briar.api.forum.ForumConstants.KEY_LOCAL;
 import static org.briarproject.briar.api.forum.ForumConstants.KEY_PARENT;
@@ -75,8 +76,9 @@ class ForumManagerImpl extends BdfIncomingMessageHook implements ForumManager {
 	}
 
 	@Override
-	protected boolean incomingMessage(Transaction txn, Message m, BdfList body,
-			BdfDictionary meta) throws DbException, FormatException {
+	protected DeliveryAction incomingMessage(Transaction txn, Message m,
+			BdfList body, BdfDictionary meta)
+			throws DbException, FormatException {
 
 		messageTracker.trackIncomingMessage(txn, m);
 
@@ -86,8 +88,7 @@ class ForumManagerImpl extends BdfIncomingMessageHook implements ForumManager {
 				new ForumPostReceivedEvent(m.getGroupId(), header, text);
 		txn.attach(event);
 
-		// share message
-		return true;
+		return ACCEPT_SHARE;
 	}
 
 	@Override
@@ -104,11 +105,14 @@ class ForumManagerImpl extends BdfIncomingMessageHook implements ForumManager {
 
 	@Override
 	public void removeForum(Forum f) throws DbException {
-		db.transaction(false, txn -> {
-			for (RemoveForumHook hook : removeHooks)
-				hook.removingForum(txn, f);
-			db.removeGroup(txn, f.getGroup());
-		});
+		db.transaction(false, txn -> removeForum(txn, f));
+	}
+
+	@Override
+	public void removeForum(Transaction txn, Forum f) throws DbException {
+		for (RemoveForumHook hook : removeHooks)
+			hook.removingForum(txn, f);
+		db.removeGroup(txn, f.getGroup());
 	}
 
 	@Override
@@ -265,6 +269,12 @@ class ForumManagerImpl extends BdfIncomingMessageHook implements ForumManager {
 			throws DbException {
 		db.transaction(false, txn ->
 				messageTracker.setReadFlag(txn, g, m, read));
+	}
+
+	@Override
+	public void setReadFlag(Transaction txn, GroupId g, MessageId m,
+			boolean read) throws DbException {
+		messageTracker.setReadFlag(txn, g, m, read);
 	}
 
 	private Forum parseForum(Group g) throws FormatException {

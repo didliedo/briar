@@ -1,6 +1,6 @@
 package org.briarproject.bramble.api.record;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 
@@ -12,4 +12,6 @@ public interface RecordWriter {
 	void flush() throws IOException;
 
 	void close() throws IOException;
+
+	long getBytesWritten();
 }

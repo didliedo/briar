@@ -7,12 +7,12 @@ import org.briarproject.bramble.api.data.BdfEntry;
 import org.briarproject.bramble.api.db.DatabaseComponent;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.briar.api.client.MessageTracker;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -114,8 +114,8 @@ class MessageTrackerImpl implements MessageTracker {
 		try {
 			BdfDictionary d = clientHelper.getGroupMetadataAsDictionary(txn, g);
 			return new GroupCount(
-					d.getLong(GROUP_KEY_MSG_COUNT, 0L).intValue(),
-					d.getLong(GROUP_KEY_UNREAD_COUNT, 0L).intValue(),
+					d.getInt(GROUP_KEY_MSG_COUNT, 0),
+					d.getInt(GROUP_KEY_UNREAD_COUNT, 0),
 					d.getLong(GROUP_KEY_LATEST_MSG, 0L)
 			);
 		} catch (FormatException e) {

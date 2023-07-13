@@ -12,7 +12,6 @@ import org.briarproject.bramble.api.db.TransactionManager;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.identity.LocalAuthor;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.briar.android.contactselection.ContactSelectorControllerImpl;
@@ -27,6 +26,8 @@ import org.briarproject.briar.api.privategroup.PrivateGroupFactory;
 import org.briarproject.briar.api.privategroup.PrivateGroupManager;
 import org.briarproject.briar.api.privategroup.invitation.GroupInvitationFactory;
 import org.briarproject.briar.api.privategroup.invitation.GroupInvitationManager;
+import org.briarproject.briar.api.sharing.SharingManager.SharingStatus;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -41,8 +42,8 @@ import androidx.annotation.Nullable;
 
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
-import static org.briarproject.bramble.api.nullsafety.NullSafety.requireNonNull;
 import static org.briarproject.bramble.util.LogUtils.logException;
+import static org.briarproject.nullsafety.NullSafety.requireNonNull;
 
 @Immutable
 @NotNullByDefault
@@ -140,8 +141,8 @@ class CreateGroupControllerImpl extends ContactSelectorControllerImpl
 	}
 
 	@Override
-	protected boolean isDisabled(GroupId g, Contact c) throws DbException {
-		return !groupInvitationManager.isInvitationAllowed(c, g);
+	protected SharingStatus getSharingStatus(GroupId g, Contact c) throws DbException {
+		return groupInvitationManager.getSharingStatus(c, g);
 	}
 
 	@Override

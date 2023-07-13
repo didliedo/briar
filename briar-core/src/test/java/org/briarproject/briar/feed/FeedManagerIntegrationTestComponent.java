@@ -4,7 +4,10 @@ import org.briarproject.bramble.BrambleCoreIntegrationTestEagerSingletons;
 import org.briarproject.bramble.BrambleCoreModule;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
+import org.briarproject.bramble.mailbox.ModularMailboxModule;
 import org.briarproject.bramble.test.BrambleCoreIntegrationTestModule;
+import org.briarproject.bramble.test.TestDnsModule;
+import org.briarproject.bramble.test.TestPluginConfigModule;
 import org.briarproject.bramble.test.TestSocksModule;
 import org.briarproject.briar.api.blog.BlogManager;
 import org.briarproject.briar.api.feed.FeedManager;
@@ -12,7 +15,6 @@ import org.briarproject.briar.avatar.AvatarModule;
 import org.briarproject.briar.blog.BlogModule;
 import org.briarproject.briar.client.BriarClientModule;
 import org.briarproject.briar.identity.IdentityModule;
-import org.briarproject.briar.test.TestDnsModule;
 
 import javax.inject.Singleton;
 
@@ -27,8 +29,10 @@ import dagger.Component;
 		BriarClientModule.class,
 		FeedModule.class,
 		IdentityModule.class,
+		ModularMailboxModule.class,
 		TestDnsModule.class,
 		TestSocksModule.class,
+		TestPluginConfigModule.class,
 })
 interface FeedManagerIntegrationTestComponent
 		extends BrambleCoreIntegrationTestEagerSingletons {

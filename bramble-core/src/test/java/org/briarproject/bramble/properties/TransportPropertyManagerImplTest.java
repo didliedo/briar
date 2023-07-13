@@ -8,12 +8,9 @@ import org.briarproject.bramble.api.data.BdfDictionary;
 import org.briarproject.bramble.api.data.BdfEntry;
 import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.data.MetadataParser;
-import org.briarproject.bramble.api.db.CommitAction;
 import org.briarproject.bramble.api.db.DatabaseComponent;
-import org.briarproject.bramble.api.db.EventAction;
 import org.briarproject.bramble.api.db.Metadata;
 import org.briarproject.bramble.api.db.Transaction;
-import org.briarproject.bramble.api.event.Event;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.properties.event.RemoteTransportPropertiesUpdatedEvent;
@@ -43,10 +40,12 @@ import static org.briarproject.bramble.api.properties.TransportPropertyConstants
 import static org.briarproject.bramble.api.properties.TransportPropertyManager.CLIENT_ID;
 import static org.briarproject.bramble.api.properties.TransportPropertyManager.MAJOR_VERSION;
 import static org.briarproject.bramble.api.sync.Group.Visibility.SHARED;
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_DO_NOT_SHARE;
 import static org.briarproject.bramble.test.TestUtils.getContact;
 import static org.briarproject.bramble.test.TestUtils.getGroup;
 import static org.briarproject.bramble.test.TestUtils.getMessage;
 import static org.briarproject.bramble.test.TestUtils.getRandomId;
+import static org.briarproject.bramble.test.TestUtils.hasEvent;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -230,7 +229,8 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 		}});
 
 		TransportPropertyManagerImpl t = createInstance();
-		assertFalse(t.incomingMessage(txn, message, meta));
+		assertEquals(ACCEPT_DO_NOT_SHARE,
+				t.incomingMessage(txn, message, meta));
 		assertTrue(hasEvent(txn, RemoteTransportPropertiesUpdatedEvent.class));
 	}
 
@@ -269,7 +269,8 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 		}});
 
 		TransportPropertyManagerImpl t = createInstance();
-		assertFalse(t.incomingMessage(txn, message, meta));
+		assertEquals(ACCEPT_DO_NOT_SHARE,
+				t.incomingMessage(txn, message, meta));
 		assertTrue(hasEvent(txn, RemoteTransportPropertiesUpdatedEvent.class));
 	}
 
@@ -308,7 +309,8 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 		}});
 
 		TransportPropertyManagerImpl t = createInstance();
-		assertFalse(t.incomingMessage(txn, message, meta));
+		assertEquals(ACCEPT_DO_NOT_SHARE,
+				t.incomingMessage(txn, message, meta));
 		assertFalse(hasEvent(txn, RemoteTransportPropertiesUpdatedEvent.class));
 	}
 
@@ -402,7 +404,7 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 			oneOf(clientHelper).getMessageMetadataAsDictionary(txn,
 					localGroup.getId());
 			will(returnValue(messageMetadata));
-			oneOf(clientHelper).getMessageAsList(txn, fooUpdateId);
+			oneOf(clientHelper).getMessageAsList(txn, fooUpdateId, false);
 			will(returnValue(fooUpdate));
 			oneOf(clientHelper).parseAndValidateTransportProperties(
 					fooPropertiesDict);
@@ -469,7 +471,7 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 			oneOf(clientHelper).getMessageMetadataAsDictionary(txn,
 					contactGroup2.getId());
 			will(returnValue(messageMetadata));
-			oneOf(clientHelper).getMessageAsList(txn, fooUpdateId);
+			oneOf(clientHelper).getMessageAsList(txn, fooUpdateId, false);
 			will(returnValue(fooUpdate));
 			oneOf(clientHelper).parseAndValidateTransportProperties(
 					fooPropertiesDict);
@@ -524,7 +526,7 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 			oneOf(clientHelper).getMessageMetadataAsDictionary(txn,
 					contactGroup.getId());
 			will(returnValue(messageMetadata));
-			oneOf(clientHelper).getMessageAsList(txn, updateId);
+			oneOf(clientHelper).getMessageAsList(txn, updateId, false);
 			will(returnValue(update));
 			oneOf(clientHelper).parseAndValidateTransportProperties(
 					fooPropertiesDict);
@@ -562,7 +564,7 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 			oneOf(clientHelper).getMessageMetadataAsDictionary(txn,
 					localGroup.getId());
 			will(returnValue(messageMetadata));
-			oneOf(clientHelper).getMessageAsList(txn, updateId);
+			oneOf(clientHelper).getMessageAsList(txn, updateId, false);
 			will(returnValue(update));
 			oneOf(clientHelper).parseAndValidateTransportProperties(
 					fooPropertiesDict);
@@ -693,7 +695,8 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 			oneOf(clientHelper).getMessageMetadataAsDictionary(txn,
 					localGroup.getId());
 			will(returnValue(localGroupMessageMetadata));
-			oneOf(clientHelper).getMessageAsList(txn, localGroupUpdateId);
+			oneOf(clientHelper).getMessageAsList(txn, localGroupUpdateId,
+					false);
 			will(returnValue(oldUpdate));
 			oneOf(clientHelper).parseAndValidateTransportProperties(
 					oldPropertiesDict);
@@ -758,7 +761,8 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 			oneOf(clientHelper).getMessageMetadataAsDictionary(txn,
 					localGroup.getId());
 			will(returnValue(localGroupMessageMetadata));
-			oneOf(clientHelper).getMessageAsList(txn, localGroupUpdateId);
+			oneOf(clientHelper).getMessageAsList(txn, localGroupUpdateId,
+					false);
 			will(returnValue(oldUpdate));
 			oneOf(clientHelper).parseAndValidateTransportProperties(
 					oldPropertiesDict);
@@ -817,12 +821,12 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 					localGroup.getId());
 			will(returnValue(messageMetadata));
 			// Retrieve and parse the latest local properties
-			oneOf(clientHelper).getMessageAsList(txn, fooVersion999);
+			oneOf(clientHelper).getMessageAsList(txn, fooVersion999, false);
 			will(returnValue(fooUpdate));
 			oneOf(clientHelper).parseAndValidateTransportProperties(
 					fooPropertiesDict);
 			will(returnValue(fooProperties));
-			oneOf(clientHelper).getMessageAsList(txn, barVersion3);
+			oneOf(clientHelper).getMessageAsList(txn, barVersion3, false);
 			will(returnValue(barUpdate));
 			oneOf(clientHelper).parseAndValidateTransportProperties(
 					barPropertiesDict);
@@ -850,16 +854,5 @@ public class TransportPropertyManagerImplTest extends BrambleMockTestCase {
 			oneOf(clientHelper).addLocalMessage(txn, message, meta, shared,
 					false);
 		}});
-	}
-
-	private boolean hasEvent(Transaction txn,
-			Class<? extends Event> eventClass) {
-		for (CommitAction action : txn.getActions()) {
-			if (action instanceof EventAction) {
-				Event event = ((EventAction) action).getEvent();
-				if (eventClass.isInstance(event)) return true;
-			}
-		}
-		return false;
 	}
 }

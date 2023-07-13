@@ -16,7 +16,6 @@ import org.briarproject.bramble.api.identity.AuthorId;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.identity.LocalAuthor;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager.OpenDatabaseHook;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Group.Visibility;
 import org.briarproject.bramble.api.sync.GroupFactory;
@@ -31,6 +30,7 @@ import org.briarproject.briar.api.attachment.AttachmentHeader;
 import org.briarproject.briar.api.avatar.AvatarManager;
 import org.briarproject.briar.api.avatar.AvatarMessageEncoder;
 import org.briarproject.briar.api.avatar.event.AvatarUpdatedEvent;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,6 +40,7 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
 
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_DO_NOT_SHARE;
 import static org.briarproject.briar.api.attachment.MediaConstants.MSG_KEY_CONTENT_TYPE;
 import static org.briarproject.briar.avatar.AvatarConstants.GROUP_KEY_CONTACT_ID;
 import static org.briarproject.briar.avatar.AvatarConstants.MSG_KEY_VERSION;
@@ -124,8 +125,8 @@ class AvatarManagerImpl implements AvatarManager, OpenDatabaseHook, ContactHook,
 	}
 
 	@Override
-	public boolean incomingMessage(Transaction txn, Message m, Metadata meta)
-			throws DbException, InvalidMessageException {
+	public DeliveryAction incomingMessage(Transaction txn, Message m,
+			Metadata meta) throws DbException, InvalidMessageException {
 		Group ourGroup = getOurGroup(txn);
 		if (m.getGroupId().equals(ourGroup.getId())) {
 			throw new InvalidMessageException(
@@ -144,7 +145,7 @@ class AvatarManagerImpl implements AvatarManager, OpenDatabaseHook, ContactHook,
 					// We've already received a newer update - delete this one
 					db.deleteMessage(txn, m.getId());
 					db.deleteMessageMetadata(txn, m.getId());
-					return false; // don't broadcast update
+					return ACCEPT_DO_NOT_SHARE;
 				}
 			}
 			ContactId contactId = getContactId(txn, m.getGroupId());
@@ -155,7 +156,7 @@ class AvatarManagerImpl implements AvatarManager, OpenDatabaseHook, ContactHook,
 		} catch (FormatException e) {
 			throw new InvalidMessageException(e);
 		}
-		return false;
+		return ACCEPT_DO_NOT_SHARE;
 	}
 
 	@Override
@@ -249,7 +250,7 @@ class AvatarManagerImpl implements AvatarManager, OpenDatabaseHook, ContactHook,
 		try {
 			BdfDictionary meta =
 					clientHelper.getGroupMetadataAsDictionary(txn, g);
-			return new ContactId(meta.getLong(GROUP_KEY_CONTACT_ID).intValue());
+			return new ContactId(meta.getInt(GROUP_KEY_CONTACT_ID));
 		} catch (FormatException e) {
 			throw new DbException(e);
 		}

@@ -12,8 +12,6 @@ import android.view.ViewGroup;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.fragment.BaseFragment;
@@ -22,6 +20,8 @@ import org.briarproject.briar.android.privategroup.invitation.GroupInvitationAct
 import org.briarproject.briar.android.privategroup.list.GroupViewHolder.OnGroupRemoveClickListener;
 import org.briarproject.briar.android.util.BriarSnackbarBuilder;
 import org.briarproject.briar.android.view.BriarRecyclerView;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -70,7 +70,7 @@ public class GroupListFragment extends BaseFragment implements
 
 		adapter = new GroupListAdapter(this);
 		list = v.findViewById(R.id.list);
-		list.setEmptyImage(R.drawable.ic_empty_state_group_list);
+		list.setEmptyImage(R.drawable.il_empty_state_group_list);
 		list.setEmptyText(R.string.groups_list_empty);
 		list.setEmptyAction(R.string.groups_list_empty_action);
 		list.setLayoutManager(new LinearLayoutManager(getContext()));

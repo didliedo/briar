@@ -4,9 +4,9 @@ import android.content.Context;
 import android.os.Bundle;
 import android.view.View;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import javax.inject.Inject;
 
@@ -18,7 +18,6 @@ import androidx.preference.ListPreference;
 import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.SwitchPreferenceCompat;
 
-import static android.os.Build.VERSION.SDK_INT;
 import static java.util.Objects.requireNonNull;
 import static org.briarproject.briar.android.AppModule.getAndroidComponent;
 import static org.briarproject.briar.android.settings.SettingsActivity.enableAndPersist;
@@ -71,17 +70,12 @@ public class SecurityFragment extends PreferenceFragmentCompat {
 	@Override
 	public void onViewCreated(View view, @Nullable Bundle savedInstanceState) {
 		super.onViewCreated(view, savedInstanceState);
-		if (SDK_INT < 21) {
-			screenLock.setVisible(false);
-			screenLockTimeout.setVisible(false);
-		} else {
-			// timeout depends on screenLock and gets disabled automatically
-			LifecycleOwner lifecycleOwner = getViewLifecycleOwner();
-			viewModel.getScreenLockTimeout().observe(lifecycleOwner, value -> {
-				screenLockTimeout.setValue(value);
-				enableAndPersist(screenLockTimeout);
-			});
-		}
+		// timeout depends on screenLock and gets disabled automatically
+		LifecycleOwner lifecycleOwner = getViewLifecycleOwner();
+		viewModel.getScreenLockTimeout().observe(lifecycleOwner, value -> {
+			screenLockTimeout.setValue(value);
+			enableAndPersist(screenLockTimeout);
+		});
 	}
 
 	@Override
@@ -92,7 +86,6 @@ public class SecurityFragment extends PreferenceFragmentCompat {
 	}
 
 	private void checkScreenLock() {
-		if (SDK_INT < 21) return;
 		LifecycleOwner lifecycleOwner = getViewLifecycleOwner();
 		viewModel.getScreenLockEnabled().removeObservers(lifecycleOwner);
 		if (hasScreenLock(requireActivity())) {

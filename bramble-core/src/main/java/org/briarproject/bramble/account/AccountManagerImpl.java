@@ -1,5 +1,6 @@
 package org.briarproject.bramble.account;
 
+import org.briarproject.bramble.api.FormatException;
 import org.briarproject.bramble.api.account.AccountManager;
 import org.briarproject.bramble.api.crypto.CryptoComponent;
 import org.briarproject.bramble.api.crypto.DecryptionException;
@@ -8,9 +9,9 @@ import org.briarproject.bramble.api.crypto.SecretKey;
 import org.briarproject.bramble.api.db.DatabaseConfig;
 import org.briarproject.bramble.api.identity.Identity;
 import org.briarproject.bramble.api.identity.IdentityManager;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.util.IoUtils;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,7 +19,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.nio.charset.Charset;
 import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
@@ -28,6 +28,7 @@ import javax.inject.Inject;
 import static java.util.logging.Level.WARNING;
 import static org.briarproject.bramble.api.crypto.DecryptionResult.INVALID_CIPHERTEXT;
 import static org.briarproject.bramble.util.LogUtils.logException;
+import static org.briarproject.bramble.util.StringUtils.UTF_8;
 import static org.briarproject.bramble.util.StringUtils.fromHexString;
 import static org.briarproject.bramble.util.StringUtils.toHexString;
 
@@ -98,7 +99,7 @@ class AccountManagerImpl implements AccountManager {
 		}
 		try {
 			BufferedReader reader = new BufferedReader(new InputStreamReader(
-					new FileInputStream(f), Charset.forName("UTF-8")));
+					new FileInputStream(f), UTF_8));
 			String key = reader.readLine();
 			reader.close();
 			return key;
@@ -150,7 +151,7 @@ class AccountManagerImpl implements AccountManager {
 	@GuardedBy("stateChangeLock")
 	private void writeDbKeyToFile(String key, File f) throws IOException {
 		FileOutputStream out = new FileOutputStream(f);
-		out.write(key.getBytes(Charset.forName("UTF-8")));
+		out.write(key.getBytes(UTF_8));
 		out.flush();
 		out.close();
 	}
@@ -209,7 +210,13 @@ class AccountManagerImpl implements AccountManager {
 			LOG.warning("Failed to load encrypted database key");
 			throw new DecryptionException(INVALID_CIPHERTEXT);
 		}
-		byte[] ciphertext = fromHexString(hex);
+		byte[] ciphertext;
+		try {
+			ciphertext = fromHexString(hex);
+		} catch (FormatException e) {
+			LOG.warning("Encrypted database key has invalid format");
+			throw new DecryptionException(INVALID_CIPHERTEXT);
+		}
 		KeyStrengthener keyStrengthener = databaseConfig.getKeyStrengthener();
 		byte[] plaintext = crypto.decryptWithPassword(ciphertext, password,
 				keyStrengthener);

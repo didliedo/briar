@@ -3,7 +3,6 @@ package org.briarproject.briar.android;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -16,12 +15,13 @@ import android.os.IBinder;
 
 import com.bumptech.glide.Glide;
 
+import org.briarproject.android.dontkillmelib.wakelock.AndroidWakeLockManager;
 import org.briarproject.bramble.api.account.AccountManager;
 import org.briarproject.bramble.api.crypto.SecretKey;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult;
 import org.briarproject.bramble.api.system.AndroidExecutor;
-import org.briarproject.bramble.api.system.AndroidWakeLockManager;
+import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.logout.HideUiActivity;
 import org.briarproject.briar.api.android.AndroidNotificationManager;
@@ -34,11 +34,9 @@ import java.util.logging.Logger;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-import androidx.core.app.NotificationCompat;
+import androidx.annotation.UiThread;
 
-import static android.app.NotificationManager.IMPORTANCE_DEFAULT;
 import static android.app.NotificationManager.IMPORTANCE_LOW;
-import static android.app.PendingIntent.FLAG_UPDATE_CURRENT;
 import static android.content.Intent.ACTION_SHUTDOWN;
 import static android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK;
 import static android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP;
@@ -52,27 +50,30 @@ import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult.ALREADY_RUNNING;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.StartResult.SUCCESS;
-import static org.briarproject.bramble.api.nullsafety.NullSafety.requireNonNull;
+import static org.briarproject.bramble.util.AndroidUtils.isUiThread;
 import static org.briarproject.briar.android.BriarApplication.ENTRY_ACTIVITY;
-import static org.briarproject.briar.api.android.AndroidNotificationManager.FAILURE_CHANNEL_ID;
-import static org.briarproject.briar.api.android.AndroidNotificationManager.FAILURE_NOTIFICATION_ID;
 import static org.briarproject.briar.api.android.AndroidNotificationManager.ONGOING_CHANNEL_ID;
 import static org.briarproject.briar.api.android.AndroidNotificationManager.ONGOING_CHANNEL_OLD_ID;
 import static org.briarproject.briar.api.android.AndroidNotificationManager.ONGOING_NOTIFICATION_ID;
 import static org.briarproject.briar.api.android.LockManager.ACTION_LOCK;
 import static org.briarproject.briar.api.android.LockManager.EXTRA_PID;
+import static org.briarproject.nullsafety.NullSafety.requireNonNull;
 
 public class BriarService extends Service {
 
 	public static String EXTRA_START_RESULT =
 			"org.briarproject.briar.START_RESULT";
-	public static String EXTRA_NOTIFICATION_ID =
-			"org.briarproject.briar.FAILURE_NOTIFICATION_ID";
 	public static String EXTRA_STARTUP_FAILED =
 			"org.briarproject.briar.STARTUP_FAILED";
 
 	private static final Logger LOG =
 			Logger.getLogger(BriarService.class.getName());
+
+	/**
+	 * Don't clear the Glide cache repeatedly if low memory warnings arrive
+	 * in quick succession.
+	 */
+	private static final long MIN_GLIDE_CACHE_CLEAR_INTERVAL_MS = 5000;
 
 	private final AtomicBoolean created = new AtomicBoolean(false);
 	private final Binder binder = new BriarBinder();
@@ -95,7 +96,11 @@ public class BriarService extends Service {
 	volatile LifecycleManager lifecycleManager;
 	@Inject
 	volatile AndroidExecutor androidExecutor;
+	@Inject
+	volatile Clock clock;
+
 	private volatile boolean started = false;
+	private volatile long glideCacheCleared = 0;
 
 	@Override
 	public void onCreate() {
@@ -135,12 +140,6 @@ public class BriarService extends Service {
 				ongoingChannel.setLockscreenVisibility(VISIBILITY_SECRET);
 				ongoingChannel.setShowBadge(false);
 				nm.createNotificationChannel(ongoingChannel);
-				NotificationChannel failureChannel = new NotificationChannel(
-						FAILURE_CHANNEL_ID,
-						getString(R.string.startup_failed_notification_title),
-						IMPORTANCE_DEFAULT);
-				failureChannel.setLockscreenVisibility(VISIBILITY_SECRET);
-				nm.createNotificationChannel(failureChannel);
 			}
 			Notification foregroundNotification =
 					notificationManager.getForegroundNotification();
@@ -151,12 +150,15 @@ public class BriarService extends Service {
 				if (result == SUCCESS) {
 					started = true;
 				} else if (result == ALREADY_RUNNING) {
-					LOG.info("Already running");
-					stopSelf();
+					LOG.warning("Already running");
+					// The core has outlived the original BriarService
+					// instance. We don't know how to recover from this
+					// unexpected state, so try to exit cleanly
+					shutdownFromBackground();
 				} else {
 					if (LOG.isLoggable(WARNING))
 						LOG.warning("Startup failed: " + result);
-					showStartupFailureNotification(result);
+					showStartupFailure(result);
 					stopSelf();
 				}
 			}, "LifecycleStartup");
@@ -182,29 +184,13 @@ public class BriarService extends Service {
 		Localizer.getInstance().setLocale(this);
 	}
 
-	private void showStartupFailureNotification(StartResult result) {
+	private void showStartupFailure(StartResult result) {
 		androidExecutor.runOnUiThread(() -> {
-			NotificationCompat.Builder b = new NotificationCompat.Builder(
-					BriarService.this, FAILURE_CHANNEL_ID);
-			b.setSmallIcon(android.R.drawable.stat_notify_error);
-			b.setContentTitle(getText(
-					R.string.startup_failed_notification_title));
-			b.setContentText(getText(
-					R.string.startup_failed_notification_text));
-			Intent i = new Intent(BriarService.this,
-					StartupFailureActivity.class);
-			i.setFlags(FLAG_ACTIVITY_NEW_TASK);
-			i.putExtra(EXTRA_START_RESULT, result);
-			i.putExtra(EXTRA_NOTIFICATION_ID, FAILURE_NOTIFICATION_ID);
-			b.setContentIntent(PendingIntent.getActivity(BriarService.this,
-					0, i, FLAG_UPDATE_CURRENT));
-			NotificationManager nm = (NotificationManager)
-					requireNonNull(getSystemService(NOTIFICATION_SERVICE));
-			nm.notify(FAILURE_NOTIFICATION_ID, b.build());
-			// Bring the dashboard to the front to clear the back stack
-			i = new Intent(BriarService.this, ENTRY_ACTIVITY);
+			// Bring the entry activity to the front to clear the back stack
+			Intent i = new Intent(BriarService.this, ENTRY_ACTIVITY);
 			i.setFlags(FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_CLEAR_TOP);
 			i.putExtra(EXTRA_STARTUP_FAILED, true);
+			i.putExtra(EXTRA_START_RESULT, result);
 			startActivity(i);
 		});
 	}
@@ -246,6 +232,7 @@ public class BriarService extends Service {
 	public void onLowMemory() {
 		super.onLowMemory();
 		LOG.warning("Memory is low");
+		maybeClearGlideCache();
 		// If we're not in the foreground, clear the UI to save memory
 		if (app.isRunningInBackground()) hideUi();
 	}
@@ -263,17 +250,36 @@ public class BriarService extends Service {
 			LOG.info("Trim memory: near end of LRU list");
 		} else if (level == TRIM_MEMORY_RUNNING_MODERATE) {
 			LOG.info("Trim memory: running moderately low");
-			Glide.get(getApplicationContext()).clearMemory();
+			maybeClearGlideCache();
 		} else if (level == TRIM_MEMORY_RUNNING_LOW) {
 			LOG.info("Trim memory: running low");
-			// TODO investigate if we can clear Glide cache here as well
+			maybeClearGlideCache();
 		} else if (level == TRIM_MEMORY_RUNNING_CRITICAL) {
 			LOG.warning("Trim memory: running critically low");
-			// TODO investigate if we can clear Glide cache here as well
+			maybeClearGlideCache();
 			// If we're not in the foreground, clear the UI to save memory
 			if (app.isRunningInBackground()) hideUi();
 		} else if (LOG.isLoggable(INFO)) {
 			LOG.info("Trim memory: unknown level " + level);
+		}
+	}
+
+	private void maybeClearGlideCache() {
+		if (isUiThread()) {
+			maybeClearGlideCacheUiThread();
+		} else {
+			LOG.warning("Low memory callback was not called on main thread");
+			androidExecutor.runOnUiThread(this::maybeClearGlideCacheUiThread);
+		}
+	}
+
+	@UiThread
+	private void maybeClearGlideCacheUiThread() {
+		long now = clock.currentTimeMillis();
+		if (now - glideCacheCleared >= MIN_GLIDE_CACHE_CLEAR_INTERVAL_MS) {
+			LOG.info("Clearing Glide cache");
+			Glide.get(getApplicationContext()).clearMemory();
+			glideCacheCleared = now;
 		}
 	}
 

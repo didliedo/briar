@@ -17,7 +17,6 @@ import org.briarproject.bramble.api.identity.AuthorId;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.identity.LocalAuthor;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager.OpenDatabaseHook;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.Message;
@@ -33,6 +32,7 @@ import org.briarproject.briar.api.blog.MessageType;
 import org.briarproject.briar.api.blog.event.BlogPostAddedEvent;
 import org.briarproject.briar.api.identity.AuthorInfo;
 import org.briarproject.briar.api.identity.AuthorManager;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -50,6 +50,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_DO_NOT_SHARE;
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_SHARE;
 import static org.briarproject.briar.api.blog.BlogConstants.KEY_AUTHOR;
 import static org.briarproject.briar.api.blog.BlogConstants.KEY_COMMENT;
 import static org.briarproject.briar.api.blog.BlogConstants.KEY_ORIGINAL_MSG_ID;
@@ -109,8 +111,9 @@ class BlogManagerImpl extends BdfIncomingMessageHook implements BlogManager,
 	}
 
 	@Override
-	protected boolean incomingMessage(Transaction txn, Message m, BdfList list,
-			BdfDictionary meta) throws DbException, FormatException {
+	protected DeliveryAction incomingMessage(Transaction txn, Message m,
+			BdfList list, BdfDictionary meta)
+			throws DbException, FormatException {
 
 		GroupId groupId = m.getGroupId();
 		MessageType type = getMessageType(meta);
@@ -138,7 +141,7 @@ class BlogManagerImpl extends BdfIncomingMessageHook implements BlogManager,
 			txn.attach(event);
 
 			// shares message and its dependencies
-			return true;
+			return ACCEPT_SHARE;
 		} else if (type == WRAPPED_COMMENT) {
 			// Check that the original message ID in the dependency's metadata
 			// matches the original parent ID of the wrapped comment
@@ -153,7 +156,7 @@ class BlogManagerImpl extends BdfIncomingMessageHook implements BlogManager,
 			}
 		}
 		// don't share message until parent arrives
-		return false;
+		return ACCEPT_DO_NOT_SHARE;
 	}
 
 	@Override
@@ -484,7 +487,7 @@ class BlogManagerImpl extends BdfIncomingMessageHook implements BlogManager,
 	}
 
 	private String getPostText(BdfList message) throws FormatException {
-		MessageType type = MessageType.valueOf(message.getLong(0).intValue());
+		MessageType type = MessageType.valueOf(message.getInt(0));
 		if (type == POST) {
 			// Type, text, signature
 			return message.getString(1);
@@ -618,7 +621,6 @@ class BlogManagerImpl extends BdfIncomingMessageHook implements BlogManager,
 	}
 
 	private MessageType getMessageType(BdfDictionary d) throws FormatException {
-		Long longType = d.getLong(KEY_TYPE);
-		return MessageType.valueOf(longType.intValue());
+		return MessageType.valueOf(d.getInt(KEY_TYPE));
 	}
 }

@@ -16,8 +16,6 @@ import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.identity.LocalAuthor;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.plugin.BluetoothConstants;
 import org.briarproject.bramble.api.plugin.LanTcpConstants;
 import org.briarproject.bramble.api.plugin.TorConstants;
@@ -25,8 +23,6 @@ import org.briarproject.bramble.api.settings.Settings;
 import org.briarproject.bramble.api.settings.SettingsManager;
 import org.briarproject.bramble.api.settings.event.SettingsUpdatedEvent;
 import org.briarproject.bramble.api.system.AndroidExecutor;
-import org.briarproject.bramble.api.system.LocationUtils;
-import org.briarproject.bramble.plugin.tor.CircumventionProvider;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.attachment.UnsupportedMimeTypeException;
 import org.briarproject.briar.android.attachment.media.ImageCompressor;
@@ -34,6 +30,10 @@ import org.briarproject.briar.android.viewmodel.DbViewModel;
 import org.briarproject.briar.api.avatar.AvatarManager;
 import org.briarproject.briar.api.identity.AuthorInfo;
 import org.briarproject.briar.api.identity.AuthorManager;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
+import org.briarproject.onionwrapper.CircumventionProvider;
+import org.briarproject.onionwrapper.LocationUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -227,9 +227,14 @@ class SettingsViewModel extends DbViewModel implements EventListener {
 		if (!asList(getSupportedImageContentTypes()).contains(contentType)) {
 			throw new UnsupportedMimeTypeException(contentType, uri);
 		}
-		InputStream is = contentResolver.openInputStream(uri);
-		if (is == null) throw new IOException(
-				"ContentResolver returned null when opening InputStream");
+		InputStream is;
+		try {
+			is = contentResolver.openInputStream(uri);
+			if (is == null) throw new IOException(
+					"ContentResolver returned null when opening InputStream");
+		} catch (SecurityException e) {
+			throw new IOException(e);
+		}
 		InputStream compressed = imageCompressor.compressImage(is, contentType);
 
 		runOnDbThread(() -> {

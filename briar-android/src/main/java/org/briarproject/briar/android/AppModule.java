@@ -8,22 +8,27 @@ import android.os.StrictMode;
 import com.vanniktech.emoji.RecentEmoji;
 
 import org.briarproject.bramble.api.FeatureFlags;
+import org.briarproject.bramble.api.FormatException;
 import org.briarproject.bramble.api.crypto.CryptoComponent;
 import org.briarproject.bramble.api.crypto.KeyStrengthener;
 import org.briarproject.bramble.api.crypto.PublicKey;
 import org.briarproject.bramble.api.db.DatabaseConfig;
 import org.briarproject.bramble.api.event.EventBus;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.bramble.api.mailbox.MailboxDirectory;
 import org.briarproject.bramble.api.plugin.BluetoothConstants;
 import org.briarproject.bramble.api.plugin.LanTcpConstants;
 import org.briarproject.bramble.api.plugin.PluginConfig;
+import org.briarproject.bramble.api.plugin.TorControlPort;
 import org.briarproject.bramble.api.plugin.TorDirectory;
+import org.briarproject.bramble.api.plugin.TorSocksPort;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.plugin.duplex.DuplexPluginFactory;
 import org.briarproject.bramble.api.plugin.simplex.SimplexPluginFactory;
 import org.briarproject.bramble.api.reporting.DevConfig;
 import org.briarproject.bramble.plugin.bluetooth.AndroidBluetoothPluginFactory;
+import org.briarproject.bramble.plugin.file.AndroidRemovableDrivePluginFactory;
+import org.briarproject.bramble.plugin.file.MailboxPluginFactory;
 import org.briarproject.bramble.plugin.tcp.AndroidLanTcpPluginFactory;
 import org.briarproject.bramble.plugin.tor.AndroidTorPluginFactory;
 import org.briarproject.bramble.util.AndroidUtils;
@@ -34,13 +39,17 @@ import org.briarproject.briar.android.account.SetupModule;
 import org.briarproject.briar.android.blog.BlogModule;
 import org.briarproject.briar.android.contact.ContactListModule;
 import org.briarproject.briar.android.contact.add.nearby.AddNearbyContactModule;
+import org.briarproject.briar.android.contact.connect.ConnectViaBluetoothModule;
 import org.briarproject.briar.android.forum.ForumModule;
+import org.briarproject.briar.android.hotspot.HotspotModule;
 import org.briarproject.briar.android.introduction.IntroductionModule;
 import org.briarproject.briar.android.logging.LoggingModule;
 import org.briarproject.briar.android.login.LoginModule;
+import org.briarproject.briar.android.mailbox.MailboxModule;
 import org.briarproject.briar.android.navdrawer.NavDrawerModule;
 import org.briarproject.briar.android.privategroup.conversation.GroupConversationModule;
 import org.briarproject.briar.android.privategroup.list.GroupListModule;
+import org.briarproject.briar.android.removabledrive.TransferDataModule;
 import org.briarproject.briar.android.reporting.DevReportModule;
 import org.briarproject.briar.android.settings.SettingsModule;
 import org.briarproject.briar.android.sharing.SharingModule;
@@ -49,11 +58,14 @@ import org.briarproject.briar.android.viewmodel.ViewModelModule;
 import org.briarproject.briar.api.android.AndroidNotificationManager;
 import org.briarproject.briar.api.android.DozeWatchdog;
 import org.briarproject.briar.api.android.LockManager;
+import org.briarproject.briar.api.android.NetworkUsageMetrics;
 import org.briarproject.briar.api.android.ScreenFilterMonitor;
 import org.briarproject.briar.api.test.TestAvatarCreator;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.File;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -67,9 +79,10 @@ import dagger.Provides;
 import static android.content.Context.MODE_PRIVATE;
 import static android.os.Build.VERSION.SDK_INT;
 import static java.util.Arrays.asList;
-import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.singletonMap;
+import static org.briarproject.bramble.api.plugin.TorConstants.DEFAULT_CONTROL_PORT;
+import static org.briarproject.bramble.api.plugin.TorConstants.DEFAULT_SOCKS_PORT;
 import static org.briarproject.bramble.api.reporting.ReportingConstants.DEV_ONION_ADDRESS;
 import static org.briarproject.bramble.api.reporting.ReportingConstants.DEV_PUBLIC_KEY_HEX;
 import static org.briarproject.briar.android.TestingConstants.IS_DEBUG_BUILD;
@@ -86,12 +99,16 @@ import static org.briarproject.briar.android.TestingConstants.IS_DEBUG_BUILD;
 		DevReportModule.class,
 		ContactListModule.class,
 		IntroductionModule.class,
+		ConnectViaBluetoothModule.class,
 		// below need to be within same scope as ViewModelProvider.Factory
 		BlogModule.class,
 		ForumModule.class,
 		GroupListModule.class,
 		GroupConversationModule.class,
 		SharingModule.class,
+		HotspotModule.class,
+		TransferDataModule.class,
+		MailboxModule.class,
 })
 public class AppModule {
 
@@ -101,7 +118,7 @@ public class AppModule {
 		@Inject
 		ScreenFilterMonitor screenFilterMonitor;
 		@Inject
-		NetworkUsageLogger networkUsageLogger;
+		NetworkUsageMetrics networkUsageMetrics;
 		@Inject
 		DozeWatchdog dozeWatchdog;
 		@Inject
@@ -143,14 +160,46 @@ public class AppModule {
 
 	@Provides
 	@Singleton
+	@MailboxDirectory
+	File provideMailboxDirectory(Application app) {
+		return app.getDir("mailbox", MODE_PRIVATE);
+	}
+
+	@Provides
+	@Singleton
 	@TorDirectory
 	File provideTorDirectory(Application app) {
 		return app.getDir("tor", MODE_PRIVATE);
 	}
 
 	@Provides
+	@Singleton
+	@TorSocksPort
+	int provideTorSocksPort() {
+		if (!IS_DEBUG_BUILD) {
+			return DEFAULT_SOCKS_PORT;
+		} else {
+			return DEFAULT_SOCKS_PORT + 2;
+		}
+	}
+
+	@Provides
+	@Singleton
+	@TorControlPort
+	int provideTorControlPort() {
+		if (!IS_DEBUG_BUILD) {
+			return DEFAULT_CONTROL_PORT;
+		} else {
+			return DEFAULT_CONTROL_PORT + 2;
+		}
+	}
+
+	@Provides
+	@Singleton
 	PluginConfig providePluginConfig(AndroidBluetoothPluginFactory bluetooth,
-			AndroidTorPluginFactory tor, AndroidLanTcpPluginFactory lan) {
+			AndroidTorPluginFactory tor, AndroidLanTcpPluginFactory lan,
+			AndroidRemovableDrivePluginFactory drive,
+			MailboxPluginFactory mailbox, FeatureFlags featureFlags) {
 		@NotNullByDefault
 		PluginConfig pluginConfig = new PluginConfig() {
 
@@ -161,7 +210,10 @@ public class AppModule {
 
 			@Override
 			public Collection<SimplexPluginFactory> getSimplexFactories() {
-				return emptyList();
+				List<SimplexPluginFactory> simplex = new ArrayList<>();
+				simplex.add(mailbox);
+				simplex.add(drive);
+				return simplex;
 			}
 
 			@Override
@@ -190,7 +242,7 @@ public class AppModule {
 				try {
 					return crypto.getMessageKeyParser().parsePublicKey(
 							StringUtils.fromHexString(DEV_PUBLIC_KEY_HEX));
-				} catch (GeneralSecurityException e) {
+				} catch (GeneralSecurityException | FormatException e) {
 					throw new RuntimeException(e);
 				}
 			}
@@ -248,11 +300,12 @@ public class AppModule {
 	}
 
 	@Provides
-	NetworkUsageLogger provideNetworkUsageLogger(
+	@Singleton
+	NetworkUsageMetrics provideNetworkUsageMetrics(
 			LifecycleManager lifecycleManager) {
-		NetworkUsageLogger networkUsageLogger = new NetworkUsageLogger();
-		lifecycleManager.registerService(networkUsageLogger);
-		return networkUsageLogger;
+		NetworkUsageMetrics networkUsageMetrics = new NetworkUsageMetricsImpl();
+		lifecycleManager.registerService(networkUsageMetrics);
+		return networkUsageMetrics;
 	}
 
 	@Provides
@@ -300,8 +353,18 @@ public class AppModule {
 			}
 
 			@Override
-			public boolean shouldEnableConnectViaBluetooth() {
-				return IS_DEBUG_BUILD;
+			public boolean shouldEnablePrivateGroupsInCore() {
+				return true;
+			}
+
+			@Override
+			public boolean shouldEnableForumsInCore() {
+				return true;
+			}
+
+			@Override
+			public boolean shouldEnableBlogsInCore() {
+				return true;
 			}
 		};
 	}

@@ -1,5 +1,6 @@
 package org.briarproject.bramble.plugin;
 
+import org.briarproject.bramble.api.Cancellable;
 import org.briarproject.bramble.api.Pair;
 import org.briarproject.bramble.api.connection.ConnectionManager;
 import org.briarproject.bramble.api.connection.ConnectionRegistry;
@@ -9,7 +10,6 @@ import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.event.Event;
 import org.briarproject.bramble.api.event.EventListener;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.ConnectionHandler;
 import org.briarproject.bramble.api.plugin.Plugin;
 import org.briarproject.bramble.api.plugin.PluginManager;
@@ -27,9 +27,9 @@ import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.properties.TransportPropertyManager;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.system.TaskScheduler;
-import org.briarproject.bramble.api.system.TaskScheduler.Cancellable;
 import org.briarproject.bramble.api.system.Wakeful;
 import org.briarproject.bramble.api.system.WakefulIoExecutor;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.security.SecureRandom;
 import java.util.ArrayList;

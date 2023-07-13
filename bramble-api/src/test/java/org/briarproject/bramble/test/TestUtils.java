@@ -12,10 +12,20 @@ import org.briarproject.bramble.api.crypto.PublicKey;
 import org.briarproject.bramble.api.crypto.SecretKey;
 import org.briarproject.bramble.api.crypto.SignaturePrivateKey;
 import org.briarproject.bramble.api.crypto.SignaturePublicKey;
+import org.briarproject.bramble.api.db.CommitAction;
+import org.briarproject.bramble.api.db.EventAction;
+import org.briarproject.bramble.api.db.Transaction;
+import org.briarproject.bramble.api.event.Event;
 import org.briarproject.bramble.api.identity.Author;
 import org.briarproject.bramble.api.identity.AuthorId;
 import org.briarproject.bramble.api.identity.Identity;
 import org.briarproject.bramble.api.identity.LocalAuthor;
+import org.briarproject.bramble.api.mailbox.MailboxAuthToken;
+import org.briarproject.bramble.api.mailbox.MailboxFolderId;
+import org.briarproject.bramble.api.mailbox.MailboxProperties;
+import org.briarproject.bramble.api.mailbox.MailboxUpdate;
+import org.briarproject.bramble.api.mailbox.MailboxUpdateWithMailbox;
+import org.briarproject.bramble.api.mailbox.MailboxVersion;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.sync.ClientId;
@@ -25,7 +35,12 @@ import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.bramble.util.IoUtils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -34,6 +49,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import javax.annotation.Nullable;
+import javax.crypto.Cipher;
 
 import static java.util.Arrays.asList;
 import static org.briarproject.bramble.api.crypto.CryptoConstants.MAX_AGREEMENT_PUBLIC_KEY_BYTES;
@@ -45,6 +63,7 @@ import static org.briarproject.bramble.api.properties.TransportPropertyConstants
 import static org.briarproject.bramble.api.sync.ClientId.MAX_CLIENT_ID_LENGTH;
 import static org.briarproject.bramble.api.sync.SyncConstants.MAX_GROUP_DESCRIPTOR_LENGTH;
 import static org.briarproject.bramble.api.sync.SyncConstants.MAX_MESSAGE_BODY_LENGTH;
+import static org.briarproject.bramble.util.IoUtils.copyAndClose;
 import static org.briarproject.bramble.util.StringUtils.getRandomString;
 
 public class TestUtils {
@@ -163,10 +182,15 @@ public class TestUtils {
 
 	public static Message getMessage(GroupId groupId) {
 		int bodyLength = 1 + random.nextInt(MAX_MESSAGE_BODY_LENGTH);
-		return getMessage(groupId, bodyLength);
+		return getMessage(groupId, bodyLength, timestamp);
 	}
 
 	public static Message getMessage(GroupId groupId, int bodyLength) {
+		return getMessage(groupId, bodyLength, timestamp);
+	}
+
+	public static Message getMessage(GroupId groupId, int bodyLength,
+			long timestamp) {
 		MessageId id = new MessageId(getRandomId());
 		byte[] body = getRandomBytes(bodyLength);
 		return new Message(id, groupId, timestamp, body);
@@ -204,6 +228,37 @@ public class TestUtils {
 				getAgreementPublicKey(), verified);
 	}
 
+	public static MailboxProperties getMailboxProperties(boolean owner,
+			List<MailboxVersion> serverSupports) {
+		String onion = getRandomString(56);
+		MailboxAuthToken authToken = new MailboxAuthToken(getRandomId());
+		if (owner) {
+			return new MailboxProperties(onion, authToken, serverSupports);
+		}
+		MailboxFolderId inboxId = new MailboxFolderId(getRandomId());
+		MailboxFolderId outboxId = new MailboxFolderId(getRandomId());
+		return new MailboxProperties(onion, authToken, serverSupports,
+				inboxId, outboxId);
+	}
+
+	public static void writeBytes(File file, byte[] bytes)
+			throws IOException {
+		FileOutputStream outputStream = new FileOutputStream(file);
+		//noinspection TryFinallyCanBeTryWithResources
+		try {
+			outputStream.write(bytes);
+		} finally {
+			outputStream.close();
+		}
+	}
+
+	public static byte[] readBytes(File file) throws IOException {
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+		FileInputStream inputStream = new FileInputStream(file);
+		copyAndClose(inputStream, outputStream);
+		return outputStream.toByteArray();
+	}
+
 	public static double getMedian(Collection<? extends Number> samples) {
 		int size = samples.size();
 		if (size == 0) throw new IllegalArgumentException();
@@ -238,9 +293,68 @@ public class TestUtils {
 		return Math.sqrt(getVariance(samples));
 	}
 
-	public static boolean isOptionalTestEnabled(Class testClass) {
+	public static boolean isOptionalTestEnabled(Class<?> testClass) {
 		String optionalTests = System.getenv("OPTIONAL_TESTS");
 		return optionalTests != null &&
 				asList(optionalTests.split(",")).contains(testClass.getName());
+	}
+
+	public static boolean mailboxUpdateEqual(@Nullable MailboxUpdate a,
+			@Nullable MailboxUpdate b) {
+		if (a == null || b == null) {
+			return a == b;
+		}
+		if (!a.hasMailbox() && !b.hasMailbox()) {
+			return a.getClientSupports().equals(b.getClientSupports());
+		} else if (a.hasMailbox() && b.hasMailbox()) {
+			MailboxUpdateWithMailbox am = (MailboxUpdateWithMailbox) a;
+			MailboxUpdateWithMailbox bm = (MailboxUpdateWithMailbox) b;
+			return am.getClientSupports().equals(bm.getClientSupports()) &&
+					mailboxPropertiesEqual(am.getMailboxProperties(),
+							bm.getMailboxProperties());
+		}
+		return false;
+	}
+
+	public static boolean mailboxPropertiesEqual(@Nullable MailboxProperties a,
+			@Nullable MailboxProperties b) {
+		if (a == null || b == null) {
+			return a == b;
+		}
+		return a.getOnion().equals(b.getOnion()) &&
+				a.getAuthToken().equals(b.getAuthToken()) &&
+				a.isOwner() == b.isOwner() &&
+				a.getServerSupports().equals(b.getServerSupports());
+	}
+
+	public static boolean hasEvent(Transaction txn,
+			Class<? extends Event> eventClass) {
+		for (CommitAction action : txn.getActions()) {
+			if (action instanceof EventAction) {
+				Event event = ((EventAction) action).getEvent();
+				if (eventClass.isInstance(event)) return true;
+			}
+		}
+		return false;
+	}
+
+	public static <E extends Event> E getEvent(Transaction txn,
+			Class<E> eventClass) {
+		for (CommitAction action : txn.getActions()) {
+			if (action instanceof EventAction) {
+				Event event = ((EventAction) action).getEvent();
+				if (eventClass.isInstance(event)) return eventClass.cast(event);
+			}
+		}
+		throw new AssertionError();
+	}
+
+	public static boolean isCryptoStrengthUnlimited() {
+		try {
+			return Cipher.getMaxAllowedKeyLength("AES/CBC/PKCS5Padding")
+					== Integer.MAX_VALUE;
+		} catch (NoSuchAlgorithmException e) {
+			throw new AssertionError();
+		}
 	}
 }

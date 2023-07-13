@@ -3,10 +3,10 @@ package org.briarproject.briar.privategroup.invitation;
 import org.briarproject.bramble.api.FormatException;
 import org.briarproject.bramble.api.data.BdfDictionary;
 import org.briarproject.bramble.api.data.BdfEntry;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.briar.api.client.SessionId;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -45,11 +45,11 @@ class SessionParserImpl implements SessionParser {
 
 	@Override
 	public Role getRole(BdfDictionary d) throws FormatException {
-		return Role.fromValue(d.getLong(SESSION_KEY_ROLE).intValue());
+		return Role.fromValue(d.getInt(SESSION_KEY_ROLE));
 	}
 
 	@Override
-	public boolean isSession(BdfDictionary d) {
+	public boolean isSession(BdfDictionary d) throws FormatException {
 		return d.getBoolean(SESSION_KEY_IS_SESSION, false);
 	}
 
@@ -101,7 +101,7 @@ class SessionParserImpl implements SessionParser {
 	}
 
 	private int getState(BdfDictionary d) throws FormatException {
-		return d.getLong(SESSION_KEY_STATE).intValue();
+		return d.getInt(SESSION_KEY_STATE);
 	}
 
 	private GroupId getPrivateGroupId(BdfDictionary d) throws FormatException {

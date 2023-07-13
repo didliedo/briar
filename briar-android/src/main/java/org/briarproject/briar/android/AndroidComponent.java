@@ -1,5 +1,6 @@
 package org.briarproject.briar.android;
 
+import org.briarproject.android.dontkillmelib.wakelock.AndroidWakeLockManager;
 import org.briarproject.bramble.BrambleAndroidEagerSingletons;
 import org.briarproject.bramble.BrambleAndroidModule;
 import org.briarproject.bramble.BrambleAppComponent;
@@ -25,18 +26,33 @@ import org.briarproject.bramble.api.lifecycle.LifecycleManager;
 import org.briarproject.bramble.api.plugin.PluginManager;
 import org.briarproject.bramble.api.settings.SettingsManager;
 import org.briarproject.bramble.api.system.AndroidExecutor;
-import org.briarproject.bramble.api.system.AndroidWakeLockManager;
 import org.briarproject.bramble.api.system.Clock;
-import org.briarproject.bramble.api.system.LocationUtils;
-import org.briarproject.bramble.plugin.tor.CircumventionProvider;
+import org.briarproject.bramble.mailbox.ModularMailboxModule;
+import org.briarproject.bramble.plugin.file.RemovableDriveModule;
 import org.briarproject.bramble.system.ClockModule;
 import org.briarproject.briar.BriarCoreEagerSingletons;
 import org.briarproject.briar.BriarCoreModule;
 import org.briarproject.briar.android.attachment.AttachmentModule;
 import org.briarproject.briar.android.attachment.media.MediaModule;
+import org.briarproject.briar.android.contact.connect.BluetoothIntroFragment;
 import org.briarproject.briar.android.conversation.glide.BriarModelLoader;
+import org.briarproject.briar.android.hotspot.AbstractTabsFragment;
+import org.briarproject.briar.android.hotspot.FallbackFragment;
+import org.briarproject.briar.android.hotspot.HotspotIntroFragment;
+import org.briarproject.briar.android.hotspot.ManualHotspotFragment;
+import org.briarproject.briar.android.hotspot.QrHotspotFragment;
 import org.briarproject.briar.android.logging.CachingLogHandler;
 import org.briarproject.briar.android.login.SignInReminderReceiver;
+import org.briarproject.briar.android.mailbox.ErrorFragment;
+import org.briarproject.briar.android.mailbox.ErrorWizardFragment;
+import org.briarproject.briar.android.mailbox.MailboxScanFragment;
+import org.briarproject.briar.android.mailbox.MailboxStatusFragment;
+import org.briarproject.briar.android.mailbox.OfflineFragment;
+import org.briarproject.briar.android.mailbox.SetupDownloadFragment;
+import org.briarproject.briar.android.mailbox.SetupIntroFragment;
+import org.briarproject.briar.android.removabledrive.ChooserFragment;
+import org.briarproject.briar.android.removabledrive.ReceiveFragment;
+import org.briarproject.briar.android.removabledrive.SendFragment;
 import org.briarproject.briar.android.settings.ConnectionsFragment;
 import org.briarproject.briar.android.settings.NotificationsFragment;
 import org.briarproject.briar.android.settings.SecurityFragment;
@@ -66,6 +82,8 @@ import org.briarproject.briar.api.privategroup.PrivateGroupManager;
 import org.briarproject.briar.api.privategroup.invitation.GroupInvitationFactory;
 import org.briarproject.briar.api.privategroup.invitation.GroupInvitationManager;
 import org.briarproject.briar.api.test.TestDataCreator;
+import org.briarproject.onionwrapper.CircumventionProvider;
+import org.briarproject.onionwrapper.LocationUtils;
 
 import java.util.concurrent.Executor;
 
@@ -83,7 +101,9 @@ import dagger.Component;
 		AppModule.class,
 		AttachmentModule.class,
 		ClockModule.class,
-		MediaModule.class
+		MediaModule.class,
+		ModularMailboxModule.class,
+		RemovableDriveModule.class
 })
 public interface AndroidComponent
 		extends BrambleCoreEagerSingletons, BrambleAndroidEagerSingletons,
@@ -210,4 +230,36 @@ public interface AndroidComponent
 	void inject(SecurityFragment securityFragment);
 
 	void inject(NotificationsFragment notificationsFragment);
+
+	void inject(HotspotIntroFragment hotspotIntroFragment);
+
+	void inject(AbstractTabsFragment abstractTabsFragment);
+
+	void inject(QrHotspotFragment qrHotspotFragment);
+
+	void inject(ManualHotspotFragment manualHotspotFragment);
+
+	void inject(FallbackFragment fallbackFragment);
+
+	void inject(ChooserFragment chooserFragment);
+
+	void inject(SendFragment sendFragment);
+
+	void inject(ReceiveFragment receiveFragment);
+
+	void inject(BluetoothIntroFragment bluetoothIntroFragment);
+
+	void inject(SetupIntroFragment setupIntroFragment);
+
+	void inject(SetupDownloadFragment setupDownloadFragment);
+
+	void inject(MailboxScanFragment mailboxScanFragment);
+
+	void inject(OfflineFragment offlineFragment);
+
+	void inject(ErrorFragment errorFragment);
+
+	void inject(MailboxStatusFragment mailboxStatusFragment);
+
+	void inject(ErrorWizardFragment errorWizardFragment);
 }

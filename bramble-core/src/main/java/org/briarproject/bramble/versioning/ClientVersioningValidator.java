@@ -7,10 +7,10 @@ import org.briarproject.bramble.api.client.ClientHelper;
 import org.briarproject.bramble.api.data.BdfDictionary;
 import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.data.MetadataEncoder;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.system.Clock;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.concurrent.Immutable;
 
@@ -43,9 +43,9 @@ class ClientVersioningValidator extends BdfMessageValidator {
 			checkSize(clientState, 4);
 			String clientId = clientState.getString(0);
 			checkLength(clientId, 1, MAX_CLIENT_ID_LENGTH);
-			int majorVersion = clientState.getLong(1).intValue();
+			int majorVersion = clientState.getInt(1);
 			if (majorVersion < 0) throw new FormatException();
-			int minorVersion = clientState.getLong(2).intValue();
+			int minorVersion = clientState.getInt(2);
 			if (minorVersion < 0) throw new FormatException();
 			clientState.getBoolean(3);
 		}

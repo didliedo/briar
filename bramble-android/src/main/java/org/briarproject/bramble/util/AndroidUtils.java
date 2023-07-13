@@ -4,28 +4,29 @@ import android.annotation.SuppressLint;
 import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.os.Build;
+import android.os.Looper;
 import android.provider.Settings;
 
 import org.briarproject.bramble.api.Pair;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
-import java.util.Scanner;
 
 import javax.annotation.Nullable;
 
+import static android.Manifest.permission.BLUETOOTH_CONNECT;
+import static android.app.PendingIntent.FLAG_IMMUTABLE;
 import static android.content.Context.MODE_PRIVATE;
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import static android.os.Build.VERSION.SDK_INT;
-import static java.lang.Runtime.getRuntime;
+import static android.os.Process.myPid;
+import static android.os.Process.myUid;
 import static java.util.Arrays.asList;
-import static org.briarproject.bramble.api.nullsafety.NullSafety.requireNonNull;
+import static org.briarproject.nullsafety.NullSafety.requireNonNull;
 
 @NotNullByDefault
 public class AndroidUtils {
@@ -37,14 +38,12 @@ public class AndroidUtils {
 	private static final String STORED_LOGCAT = "dev-logcat";
 
 	public static Collection<String> getSupportedArchitectures() {
-		List<String> abis = new ArrayList<>();
-		if (SDK_INT >= 21) {
-			abis.addAll(asList(Build.SUPPORTED_ABIS));
-		} else {
-			abis.add(Build.CPU_ABI);
-			if (Build.CPU_ABI2 != null) abis.add(Build.CPU_ABI2);
-		}
-		return abis;
+		return asList(Build.SUPPORTED_ABIS);
+	}
+
+	public static boolean hasBtConnectPermission(Context ctx) {
+		return SDK_INT < 31 || ctx.checkPermission(BLUETOOTH_CONNECT, myPid(),
+				myUid()) == PERMISSION_GRANTED;
 	}
 
 	public static String getBluetoothAddress(Context ctx,
@@ -54,6 +53,9 @@ public class AndroidUtils {
 
 	public static Pair<String, String> getBluetoothAddressAndMethod(Context ctx,
 			BluetoothAdapter adapter) {
+		// If we don't have permission to access the adapter's address, let
+		// the caller know we can't find it
+		if (!hasBtConnectPermission(ctx)) return new Pair<>("", "");
 		// Return the adapter's address if it's valid and not fake
 		@SuppressLint("HardwareIds")
 		String address = adapter.getAddress();
@@ -61,10 +63,12 @@ public class AndroidUtils {
 			return new Pair<>(address, "adapter");
 		}
 		// Return the address from settings if it's valid and not fake
-		address = Settings.Secure.getString(ctx.getContentResolver(),
-				"bluetooth_address");
-		if (isValidBluetoothAddress(address)) {
-			return new Pair<>(address, "settings");
+		if (SDK_INT < 33) {
+			address = Settings.Secure.getString(ctx.getContentResolver(),
+					"bluetooth_address");
+			if (isValidBluetoothAddress(address)) {
+				return new Pair<>(address, "settings");
+			}
 		}
 		// Try to get the address via reflection
 		address = getBluetoothAddressByReflection(adapter);
@@ -122,16 +126,14 @@ public class AndroidUtils {
 		return new String[] {"image/jpeg", "image/png", "image/gif"};
 	}
 
-	@Nullable
-	public static String getSystemProperty(String propName) {
-		try {
-			Process p = getRuntime().exec("getprop " + propName);
-			Scanner s = new Scanner(p.getInputStream());
-			String line = s.nextLine();
-			s.close();
-			return line;
-		} catch (SecurityException | IOException e) {
-			return null;
+	public static boolean isUiThread() {
+		return Looper.myLooper() == Looper.getMainLooper();
+	}
+
+	public static int getImmutableFlags(int flags) {
+		if (SDK_INT >= 23) {
+			return FLAG_IMMUTABLE | flags;
 		}
+		return flags;
 	}
 }

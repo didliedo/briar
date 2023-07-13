@@ -10,14 +10,15 @@ import org.briarproject.bramble.api.event.EventBus;
 import org.briarproject.bramble.api.event.EventListener;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
 import org.briarproject.bramble.api.lifecycle.event.LifecycleEvent;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.plugin.event.TransportInactiveEvent;
+import org.briarproject.bramble.api.record.Record;
 import org.briarproject.bramble.api.sync.Ack;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.Offer;
 import org.briarproject.bramble.api.sync.Priority;
 import org.briarproject.bramble.api.sync.Request;
+import org.briarproject.bramble.api.sync.SyncConstants;
 import org.briarproject.bramble.api.sync.SyncRecordWriter;
 import org.briarproject.bramble.api.sync.SyncSession;
 import org.briarproject.bramble.api.sync.Versions;
@@ -29,6 +30,7 @@ import org.briarproject.bramble.api.sync.event.MessageToAckEvent;
 import org.briarproject.bramble.api.sync.event.MessageToRequestEvent;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.transport.StreamWriter;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -42,13 +44,16 @@ import java.util.logging.Logger;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.ThreadSafe;
 
+import static java.lang.Boolean.TRUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
 import static org.briarproject.bramble.api.lifecycle.LifecycleManager.LifecycleState.STOPPING;
-import static org.briarproject.bramble.api.record.Record.MAX_RECORD_PAYLOAD_BYTES;
+import static org.briarproject.bramble.api.record.Record.RECORD_HEADER_BYTES;
+import static org.briarproject.bramble.api.sync.Group.Visibility.SHARED;
 import static org.briarproject.bramble.api.sync.SyncConstants.MAX_MESSAGE_IDS;
+import static org.briarproject.bramble.api.sync.SyncConstants.MAX_MESSAGE_LENGTH;
 import static org.briarproject.bramble.api.sync.SyncConstants.SUPPORTED_VERSIONS;
 import static org.briarproject.bramble.util.LogUtils.logException;
 
@@ -71,13 +76,23 @@ class DuplexOutgoingSession implements SyncSession, EventListener {
 			NEXT_SEND_TIME_DECREASED = () -> {
 	};
 
+	/**
+	 * The batch capacity must be at least {@link Record#RECORD_HEADER_BYTES}
+	 * + {@link SyncConstants#MAX_MESSAGE_LENGTH} to ensure that maximum-size
+	 * messages can be selected for transmission. Larger batches will mean
+	 * fewer round-trips between the DB and the output stream, but each
+	 * round-trip will block the DB for longer.
+	 */
+	private static final int BATCH_CAPACITY =
+			(RECORD_HEADER_BYTES + MAX_MESSAGE_LENGTH) * 2;
+
 	private final DatabaseComponent db;
 	private final Executor dbExecutor;
 	private final EventBus eventBus;
 	private final Clock clock;
 	private final ContactId contactId;
 	private final TransportId transportId;
-	private final int maxLatency, maxIdleTime;
+	private final long maxLatency, maxIdleTime;
 	private final StreamWriter streamWriter;
 	private final SyncRecordWriter recordWriter;
 	@Nullable
@@ -95,7 +110,7 @@ class DuplexOutgoingSession implements SyncSession, EventListener {
 
 	DuplexOutgoingSession(DatabaseComponent db, Executor dbExecutor,
 			EventBus eventBus, Clock clock, ContactId contactId,
-			TransportId transportId, int maxLatency, int maxIdleTime,
+			TransportId transportId, long maxLatency, int maxIdleTime,
 			StreamWriter streamWriter, SyncRecordWriter recordWriter,
 			@Nullable Priority priority) {
 		this.db = db;
@@ -219,11 +234,19 @@ class DuplexOutgoingSession implements SyncSession, EventListener {
 			ContactRemovedEvent c = (ContactRemovedEvent) e;
 			if (c.getContactId().equals(contactId)) interrupt();
 		} else if (e instanceof MessageSharedEvent) {
-			generateOffer();
+			MessageSharedEvent m = (MessageSharedEvent) e;
+			// If the contact is present in the map (ie the value is not null)
+			// and the value is true, the message's group is shared with the
+			// contact and therefore the message may now be sendable
+			if (m.getGroupVisibility().get(contactId) == TRUE) {
+				generateOffer();
+			}
 		} else if (e instanceof GroupVisibilityUpdatedEvent) {
 			GroupVisibilityUpdatedEvent g = (GroupVisibilityUpdatedEvent) e;
-			if (g.getAffectedContacts().contains(contactId))
+			if (g.getVisibility() == SHARED &&
+					g.getAffectedContacts().contains(contactId)) {
 				generateOffer();
+			}
 		} else if (e instanceof MessageRequestedEvent) {
 			if (((MessageRequestedEvent) e).getContactId().equals(contactId))
 				generateBatch();
@@ -296,9 +319,9 @@ class DuplexOutgoingSession implements SyncSession, EventListener {
 						db.transactionWithNullableResult(false, txn -> {
 							Collection<Message> batch =
 									db.generateRequestedBatch(txn, contactId,
-											MAX_RECORD_PAYLOAD_BYTES,
-											maxLatency);
-							setNextSendTime(db.getNextSendTime(txn, contactId));
+											BATCH_CAPACITY, maxLatency);
+							setNextSendTime(db.getNextSendTime(txn, contactId,
+									maxLatency));
 							return batch;
 						});
 				if (LOG.isLoggable(INFO))
@@ -341,7 +364,8 @@ class DuplexOutgoingSession implements SyncSession, EventListener {
 				Offer o = db.transactionWithNullableResult(false, txn -> {
 					Offer offer = db.generateOffer(txn, contactId,
 							MAX_MESSAGE_IDS, maxLatency);
-					setNextSendTime(db.getNextSendTime(txn, contactId));
+					setNextSendTime(db.getNextSendTime(txn, contactId,
+							maxLatency));
 					return offer;
 				});
 				if (LOG.isLoggable(INFO))

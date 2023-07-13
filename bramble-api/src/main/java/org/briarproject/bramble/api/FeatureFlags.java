@@ -11,5 +11,9 @@ public interface FeatureFlags {
 
 	boolean shouldEnableDisappearingMessages();
 
-	boolean shouldEnableConnectViaBluetooth();
+	boolean shouldEnablePrivateGroupsInCore();
+
+	boolean shouldEnableForumsInCore();
+
+	boolean shouldEnableBlogsInCore();
 }

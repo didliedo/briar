@@ -1,11 +1,13 @@
 package org.briarproject.briar.conversation;
 
+import org.briarproject.bramble.api.client.ClientHelper;
 import org.briarproject.bramble.api.contact.ContactId;
 import org.briarproject.bramble.api.db.DatabaseComponent;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.bramble.api.event.Event;
 import org.briarproject.bramble.api.sync.GroupId;
+import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.briar.api.client.MessageTracker;
@@ -13,6 +15,8 @@ import org.briarproject.briar.api.client.MessageTracker.GroupCount;
 import org.briarproject.briar.api.conversation.ConversationManager;
 import org.briarproject.briar.api.conversation.ConversationMessageHeader;
 import org.briarproject.briar.api.conversation.DeletionResult;
+import org.briarproject.briar.api.conversation.event.ConversationMessageTrackedEvent;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -32,14 +36,16 @@ class ConversationManagerImpl implements ConversationManager {
 	private final DatabaseComponent db;
 	private final MessageTracker messageTracker;
 	private final Clock clock;
+	private final ClientHelper clientHelper;
 	private final Set<ConversationClient> clients;
 
 	@Inject
 	ConversationManagerImpl(DatabaseComponent db, MessageTracker messageTracker,
-			Clock clock) {
+			Clock clock, ClientHelper clientHelper) {
 		this.db = db;
 		this.messageTracker = messageTracker;
 		this.clock = clock;
+		this.clientHelper = clientHelper;
 		clients = new CopyOnWriteArraySet<>();
 	}
 
@@ -52,15 +58,16 @@ class ConversationManagerImpl implements ConversationManager {
 	@Override
 	public Collection<ConversationMessageHeader> getMessageHeaders(ContactId c)
 			throws DbException {
+		return db.transactionWithResult(true,
+				txn -> getMessageHeaders(txn, c));
+	}
+
+	@Override
+	public Collection<ConversationMessageHeader> getMessageHeaders(Transaction txn, ContactId c)
+			throws DbException {
 		List<ConversationMessageHeader> messages = new ArrayList<>();
-		Transaction txn = db.startTransaction(true);
-		try {
-			for (ConversationClient client : clients) {
-				messages.addAll(client.getMessageHeaders(txn, c));
-			}
-			db.commitTransaction(txn);
-		} finally {
-			db.endTransaction(txn);
+		for (ConversationClient client : clients) {
+			messages.addAll(client.getMessageHeaders(txn, c));
 		}
 		return messages;
 	}
@@ -87,12 +94,46 @@ class ConversationManagerImpl implements ConversationManager {
 	}
 
 	@Override
+	public void trackIncomingMessage(Transaction txn, Message m)
+			throws DbException {
+		messageTracker.trackIncomingMessage(txn, m);
+		Event e = new ConversationMessageTrackedEvent(
+				m.getTimestamp(), false,
+				clientHelper.getContactId(txn, m.getGroupId()));
+		txn.attach(e);
+	}
+
+	@Override
+	public void trackOutgoingMessage(Transaction txn, Message m)
+			throws DbException {
+		messageTracker.trackOutgoingMessage(txn, m);
+		Event e = new ConversationMessageTrackedEvent(
+				m.getTimestamp(), true,
+				clientHelper.getContactId(txn, m.getGroupId()));
+		txn.attach(e);
+	}
+
+	@Override
+	public void trackMessage(Transaction txn, GroupId g, long timestamp,
+			boolean read)
+			throws DbException {
+		messageTracker.trackMessage(txn, g, timestamp, read);
+		Event e = new ConversationMessageTrackedEvent(
+				timestamp, read, clientHelper.getContactId(txn, g));
+		txn.attach(e);
+	}
+
+	@Override
 	public void setReadFlag(GroupId g, MessageId m, boolean read)
 			throws DbException {
-		db.transaction(false, txn -> {
-			boolean wasRead = messageTracker.setReadFlag(txn, g, m, read);
-			if (read && !wasRead) db.startCleanupTimer(txn, m);
-		});
+		db.transaction(false, txn -> setReadFlag(txn, g, m, read));
+	}
+
+	@Override
+	public void setReadFlag(Transaction txn, GroupId g, MessageId m, boolean read)
+			throws DbException {
+		boolean wasRead = messageTracker.setReadFlag(txn, g, m, read);
+		if (read && !wasRead) db.startCleanupTimer(txn, m);
 	}
 
 	@Override
@@ -105,27 +146,37 @@ class ConversationManagerImpl implements ConversationManager {
 
 	@Override
 	public DeletionResult deleteAllMessages(ContactId c) throws DbException {
-		return db.transactionWithResult(false, txn -> {
-			DeletionResult result = new DeletionResult();
-			for (ConversationClient client : clients) {
-				result.addDeletionResult(client.deleteAllMessages(txn, c));
-			}
-			return result;
-		});
+		return db.transactionWithResult(false, txn ->
+				deleteAllMessages(txn, c));
+	}
+
+	@Override
+	public DeletionResult deleteAllMessages(Transaction txn, ContactId c)
+			throws DbException {
+		DeletionResult result = new DeletionResult();
+		for (ConversationClient client : clients) {
+			result.addDeletionResult(client.deleteAllMessages(txn, c));
+		}
+		return result;
 	}
 
 	@Override
 	public DeletionResult deleteMessages(ContactId c,
 			Collection<MessageId> toDelete) throws DbException {
-		return db.transactionWithResult(false, txn -> {
-			DeletionResult result = new DeletionResult();
-			for (ConversationClient client : clients) {
-				Set<MessageId> idSet = client.getMessageIds(txn, c);
-				idSet.retainAll(toDelete);
-				result.addDeletionResult(client.deleteMessages(txn, c, idSet));
-			}
-			return result;
-		});
+		return db.transactionWithResult(false, txn ->
+				deleteMessages(txn, c, toDelete));
+	}
+
+	@Override
+	public DeletionResult deleteMessages(Transaction txn, ContactId c,
+			Collection<MessageId> toDelete) throws DbException {
+		DeletionResult result = new DeletionResult();
+		for (ConversationClient client : clients) {
+			Set<MessageId> idSet = client.getMessageIds(txn, c);
+			idSet.retainAll(toDelete);
+			result.addDeletionResult(client.deleteMessages(txn, c, idSet));
+		}
+		return result;
 	}
 
 }

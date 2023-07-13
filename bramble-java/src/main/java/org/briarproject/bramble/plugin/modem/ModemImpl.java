@@ -1,18 +1,17 @@
 package org.briarproject.bramble.plugin.modem;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.reliability.ReliabilityLayer;
 import org.briarproject.bramble.api.reliability.ReliabilityLayerFactory;
 import org.briarproject.bramble.api.reliability.WriteHandler;
 import org.briarproject.bramble.api.system.Clock;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.CharacterCodingException;
-import java.nio.charset.Charset;
 import java.nio.charset.CharsetDecoder;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Semaphore;
@@ -33,6 +32,7 @@ import static java.util.logging.Level.WARNING;
 import static jssc.SerialPort.PURGE_RXCLEAR;
 import static jssc.SerialPort.PURGE_TXCLEAR;
 import static org.briarproject.bramble.util.LogUtils.logException;
+import static org.briarproject.bramble.util.StringUtils.US_ASCII;
 
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
@@ -41,7 +41,6 @@ class ModemImpl implements Modem, WriteHandler, SerialPortEventListener {
 	private static final Logger LOG =
 			Logger.getLogger(ModemImpl.class.getName());
 
-	private static final Charset US_ASCII = Charset.forName("US-ASCII");
 	private static final int MAX_LINE_LENGTH = 256;
 	private static final int[] BAUD_RATES = {
 		256000, 128000, 115200, 57600, 38400, 19200, 14400, 9600, 4800, 1200

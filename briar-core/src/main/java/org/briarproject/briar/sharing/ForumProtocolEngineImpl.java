@@ -7,13 +7,11 @@ import org.briarproject.bramble.api.db.DatabaseComponent;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.event.Event;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.versioning.ClientVersioningManager;
 import org.briarproject.briar.api.autodelete.AutoDeleteManager;
-import org.briarproject.briar.api.client.MessageTracker;
 import org.briarproject.briar.api.conversation.ConversationManager;
 import org.briarproject.briar.api.conversation.ConversationRequest;
 import org.briarproject.briar.api.forum.Forum;
@@ -22,6 +20,7 @@ import org.briarproject.briar.api.forum.ForumManager;
 import org.briarproject.briar.api.forum.ForumSharingManager;
 import org.briarproject.briar.api.forum.event.ForumInvitationRequestReceivedEvent;
 import org.briarproject.briar.api.forum.event.ForumInvitationResponseReceivedEvent;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
@@ -41,14 +40,13 @@ class ForumProtocolEngineImpl extends ProtocolEngineImpl<Forum> {
 			ClientVersioningManager clientVersioningManager,
 			MessageEncoder messageEncoder,
 			MessageParser<Forum> messageParser,
-			MessageTracker messageTracker,
 			AutoDeleteManager autoDeleteManager,
 			ConversationManager conversationManager,
 			Clock clock,
 			ForumManager forumManager,
 			InvitationFactory<Forum, ForumInvitationResponse> invitationFactory) {
 		super(db, clientHelper, clientVersioningManager, messageEncoder,
-				messageParser, messageTracker, autoDeleteManager,
+				messageParser, autoDeleteManager,
 				conversationManager, clock, ForumSharingManager.CLIENT_ID,
 				ForumSharingManager.MAJOR_VERSION, ForumManager.CLIENT_ID,
 				ForumManager.MAJOR_VERSION);

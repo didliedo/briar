@@ -8,8 +8,6 @@ import android.view.ViewGroup;
 
 import org.briarproject.bramble.api.contact.ContactId;
 import org.briarproject.bramble.api.db.DbException;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.contact.ContactItemViewHolder;
@@ -17,6 +15,8 @@ import org.briarproject.briar.android.contact.OnContactClickListener;
 import org.briarproject.briar.android.controller.handler.UiResultExceptionHandler;
 import org.briarproject.briar.android.fragment.BaseFragment;
 import org.briarproject.briar.android.view.BriarRecyclerView;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -33,7 +33,7 @@ import static org.briarproject.briar.android.contactselection.ContactSelectorAct
 
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
-public abstract class BaseContactSelectorFragment<I extends SelectableContactItem, A extends BaseContactSelectorAdapter<I, ? extends ContactItemViewHolder<I>>>
+public abstract class BaseContactSelectorFragment<I extends BaseSelectableContactItem, A extends BaseContactSelectorAdapter<I, ? extends ContactItemViewHolder<I>>>
 		extends BaseFragment
 		implements OnContactClickListener<I> {
 
@@ -70,7 +70,7 @@ public abstract class BaseContactSelectorFragment<I extends SelectableContactIte
 
 		list = contentView.findViewById(R.id.list);
 		list.setLayoutManager(new LinearLayoutManager(getActivity()));
-		list.setEmptyImage(R.drawable.ic_empty_state_contact_list);
+		list.setEmptyImage(R.drawable.il_empty_state_contact_list);
 		list.setEmptyText(getString(R.string.no_contacts_selector));
 		list.setEmptyAction(getString(R.string.no_contacts_selector_action));
 		adapter = getAdapter(requireContext(), this);

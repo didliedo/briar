@@ -1,6 +1,7 @@
 package org.briarproject.bramble.api.crypto;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.bramble.api.UniqueId;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -9,6 +10,8 @@ import javax.annotation.Nullable;
 
 @NotNullByDefault
 public interface CryptoComponent {
+
+	UniqueId generateUniqueId();
 
 	SecretKey generateSecretKey();
 
@@ -49,6 +52,38 @@ public interface CryptoComponent {
 	 */
 	SecretKey deriveSharedSecret(String label, PublicKey theirPublicKey,
 			KeyPair ourKeyPair, byte[]... inputs)
+			throws GeneralSecurityException;
+
+	/**
+	 * Derives a shared secret from two static and two ephemeral key pairs.
+	 * <p>
+	 * Do not use this method for new protocols. The shared secret can be
+	 * re-derived using the ephemeral public keys and both static private
+	 * keys, so keys derived from the shared secret should not be used if
+	 * forward secrecy is required. Use {@link #deriveSharedSecret(String,
+	 * PublicKey, PublicKey, KeyPair, KeyPair, boolean, byte[]...)} instead.
+	 * <p>
+	 * TODO: Remove this after a reasonable migration period (added 2023-03-10).
+	 * <p>
+	 *
+	 * @param label A namespaced label indicating the purpose of this shared
+	 * secret, to prevent it from being repurposed or colliding with a shared
+	 * secret derived for another purpose
+	 * @param theirStaticPublicKey The static public key of the remote party
+	 * @param theirEphemeralPublicKey The ephemeral public key of the remote
+	 * party
+	 * @param ourStaticKeyPair The static key pair of the local party
+	 * @param ourEphemeralKeyPair The ephemeral key pair of the local party
+	 * @param alice True if the local party is Alice
+	 * @param inputs Additional inputs that will be included in the
+	 * derivation of the shared secret
+	 * @return The shared secret
+	 */
+	@Deprecated
+	SecretKey deriveSharedSecretBadly(String label,
+			PublicKey theirStaticPublicKey, PublicKey theirEphemeralPublicKey,
+			KeyPair ourStaticKeyPair, KeyPair ourEphemeralKeyPair,
+			boolean alice, byte[]... inputs)
 			throws GeneralSecurityException;
 
 	/**
@@ -170,4 +205,13 @@ public interface CryptoComponent {
 	 * length. The line terminator is CRLF.
 	 */
 	String asciiArmour(byte[] b, int lineLength);
+
+	/**
+	 * Encode the Onion given its public key. Specified here:
+	 * https://gitweb.torproject.org/torspec.git/tree/rend-spec-v3.txt?id=29245fd5#n2135
+	 *
+	 * @return the encoded onion, base32 chars
+	 */
+	String encodeOnion(byte[] publicKey);
+
 }

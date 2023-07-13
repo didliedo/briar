@@ -1,6 +1,7 @@
 package org.briarproject.briar.android.account;
 
 import android.app.KeyguardManager;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.hardware.biometrics.BiometricPrompt;
 import android.hardware.biometrics.BiometricPrompt.AuthenticationCallback;
@@ -10,12 +11,12 @@ import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.widget.Toast;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.activity.BaseActivity;
 import org.briarproject.briar.api.android.LockManager;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.logging.Logger;
 
@@ -28,11 +29,11 @@ import static android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_CANCEL
 import static android.hardware.biometrics.BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED;
 import static android.os.Build.VERSION.SDK_INT;
 import static android.view.View.INVISIBLE;
+import static android.widget.Toast.LENGTH_LONG;
 import static org.briarproject.briar.android.activity.RequestCodes.REQUEST_KEYGUARD_UNLOCK;
 import static org.briarproject.briar.android.util.UiUtils.hasKeyguardLock;
 import static org.briarproject.briar.android.util.UiUtils.hasUsableFingerprint;
 
-@RequiresApi(21)
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
 public class UnlockActivity extends BaseActivity {
@@ -192,7 +193,12 @@ public class UnlockActivity extends BaseActivity {
 			unlock();
 		} else {
 			keyguardShown = true;
-			startActivityForResult(intent, REQUEST_KEYGUARD_UNLOCK);
+			try {
+				startActivityForResult(intent, REQUEST_KEYGUARD_UNLOCK);
+			} catch (ActivityNotFoundException e) {
+				Toast.makeText(this, R.string.error_start_activity, LENGTH_LONG)
+						.show();
+			}
 			overridePendingTransition(0, 0);
 		}
 	}

@@ -1,5 +1,6 @@
 package org.briarproject.bramble.plugin.bluetooth;
 
+import android.annotation.SuppressLint;
 import android.app.Application;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -10,8 +11,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.plugin.Backoff;
 import org.briarproject.bramble.api.plugin.PluginCallback;
 import org.briarproject.bramble.api.plugin.PluginException;
@@ -20,6 +19,8 @@ import org.briarproject.bramble.api.system.AndroidExecutor;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.util.AndroidUtils;
 import org.briarproject.bramble.util.IoUtils;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.io.IOException;
 import java.security.SecureRandom;
@@ -49,16 +50,17 @@ import static android.bluetooth.BluetoothAdapter.STATE_ON;
 import static android.bluetooth.BluetoothDevice.ACTION_FOUND;
 import static android.bluetooth.BluetoothDevice.DEVICE_TYPE_LE;
 import static android.bluetooth.BluetoothDevice.EXTRA_DEVICE;
-import static android.os.Build.VERSION.SDK_INT;
 import static java.util.Collections.shuffle;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.logging.Level.INFO;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
+import static org.briarproject.bramble.util.AndroidUtils.hasBtConnectPermission;
 import static org.briarproject.bramble.util.PrivacyUtils.scrubMacAddress;
 
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
+@SuppressLint("MissingPermission")
 class AndroidBluetoothPlugin extends
 		AbstractBluetoothPlugin<BluetoothSocket, BluetoothServerSocket> {
 
@@ -87,7 +89,7 @@ class AndroidBluetoothPlugin extends
 			Clock clock,
 			Backoff backoff,
 			PluginCallback callback,
-			int maxLatency,
+			long maxLatency,
 			int maxIdleTime) {
 		super(connectionLimiter, connectionFactory, ioExecutor,
 				wakefulIoExecutor, secureRandom, backoff, callback,
@@ -95,6 +97,11 @@ class AndroidBluetoothPlugin extends
 		this.androidExecutor = androidExecutor;
 		this.app = app;
 		this.clock = clock;
+	}
+
+	@Override
+	protected boolean isBluetoothAccessible() {
+		return hasBtConnectPermission(app);
 	}
 
 	@Override
@@ -247,7 +254,7 @@ class AndroidBluetoothPlugin extends
 					} else if (ACTION_FOUND.equals(action)) {
 						BluetoothDevice d = i.getParcelableExtra(EXTRA_DEVICE);
 						// Ignore Bluetooth LE devices
-						if (SDK_INT < 18 || d.getType() != DEVICE_TYPE_LE) {
+						if (d.getType() != DEVICE_TYPE_LE) {
 							String address = d.getAddress();
 							if (LOG.isLoggable(INFO))
 								LOG.info("Discovered " +

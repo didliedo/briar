@@ -4,7 +4,6 @@ import org.briarproject.bramble.api.crypto.PrivateKey;
 import org.briarproject.bramble.api.crypto.PublicKey;
 import org.briarproject.bramble.api.crypto.SecretKey;
 import org.briarproject.bramble.api.identity.Author;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.sync.GroupId;
@@ -13,6 +12,7 @@ import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.bramble.api.transport.KeySetId;
 import org.briarproject.briar.api.client.SessionId;
 import org.briarproject.briar.api.introduction.Role;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.Map;
 
@@ -116,8 +116,8 @@ class IntroduceeSession extends Session<IntroduceeState>
 
 	static IntroduceeSession awaitActivate(IntroduceeSession s, AuthMessage m,
 			Message sent, @Nullable Map<TransportId, KeySetId> transportKeys) {
-		Local local = new Local(s.local, sent.getId(), sent.getTimestamp());
-		Remote remote = new Remote(s.remote, m.getMessageId());
+		Local local = Local.clear(s.local, sent.getId(), sent.getTimestamp());
+		Remote remote = Remote.clear(s.remote, m.getMessageId());
 		return new IntroduceeSession(s.getSessionId(), AWAIT_ACTIVATE,
 				s.getRequestTimestamp(), s.contactGroupId, s.introducer, local,
 				remote, null, transportKeys);
@@ -228,11 +228,15 @@ class IntroduceeSession extends Session<IntroduceeState>
 			this.ephemeralPrivateKey = ephemeralPrivateKey;
 		}
 
-		private Local(Local s, @Nullable MessageId lastMessageId,
-				long lastMessageTimestamp) {
-			this(s.alice, lastMessageId, lastMessageTimestamp,
-					s.ephemeralPublicKey, s.ephemeralPrivateKey,
-					s.transportProperties, s.acceptTimestamp, s.macKey);
+		/**
+		 * Returns a copy of the given Local, updating the last message ID
+		 * and timestamp and clearing the ephemeral keys.
+		 */
+		private static Local clear(Local s,
+				@Nullable MessageId lastMessageId, long lastMessageTimestamp) {
+			return new Local(s.alice, lastMessageId, lastMessageTimestamp,
+					null, null, s.transportProperties, s.acceptTimestamp,
+					s.macKey);
 		}
 	}
 
@@ -249,8 +253,21 @@ class IntroduceeSession extends Session<IntroduceeState>
 			this.author = author;
 		}
 
+		/**
+		 * Returns a copy of the given Remote, updating the last message ID.
+		 */
 		private Remote(Remote s, @Nullable MessageId lastMessageId) {
 			this(s.alice, s.author, lastMessageId, s.ephemeralPublicKey,
+					s.transportProperties, s.acceptTimestamp, s.macKey);
+		}
+
+		/**
+		 * Returns a copy of the given Remote, updating the last message ID
+		 * and clearing the ephemeral keys.
+		 */
+		private static Remote clear(Remote s,
+				@Nullable MessageId lastMessageId) {
+			return new Remote(s.alice, s.author, lastMessageId, null,
 					s.transportProperties, s.acceptTimestamp, s.macKey);
 		}
 	}

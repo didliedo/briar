@@ -2,7 +2,11 @@ package org.briarproject.briar.messaging;
 
 import org.briarproject.bramble.BrambleCoreIntegrationTestEagerSingletons;
 import org.briarproject.bramble.BrambleCoreModule;
+import org.briarproject.bramble.mailbox.ModularMailboxModule;
 import org.briarproject.bramble.test.BrambleCoreIntegrationTestModule;
+import org.briarproject.bramble.test.TestDnsModule;
+import org.briarproject.bramble.test.TestPluginConfigModule;
+import org.briarproject.bramble.test.TestSocksModule;
 import org.briarproject.briar.autodelete.AutoDeleteModule;
 import org.briarproject.briar.avatar.AvatarModule;
 import org.briarproject.briar.client.BriarClientModule;
@@ -24,7 +28,11 @@ import dagger.Component;
 		ConversationModule.class,
 		ForumModule.class,
 		IdentityModule.class,
-		MessagingModule.class
+		MessagingModule.class,
+		ModularMailboxModule.class,
+		TestDnsModule.class,
+		TestSocksModule.class,
+		TestPluginConfigModule.class,
 })
 interface MessageSizeIntegrationTestComponent
 		extends BrambleCoreIntegrationTestEagerSingletons {

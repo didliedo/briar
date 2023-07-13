@@ -1,18 +1,16 @@
 package org.briarproject.briar.android.util;
 
-import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Activity;
+import android.app.ActivityManager;
+import android.app.ActivityManager.MemoryInfo;
 import android.app.KeyguardManager;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.drawable.Drawable;
-import android.location.LocationManager;
-import android.net.Uri;
-import android.os.PowerManager;
+import android.os.Debug;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
@@ -34,49 +32,44 @@ import com.google.android.material.textfield.TextInputLayout;
 
 import org.briarproject.bramble.api.contact.Contact;
 import org.briarproject.bramble.api.identity.Author;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.system.AndroidExecutor;
 import org.briarproject.bramble.util.StringUtils;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.reporting.FeedbackActivity;
 import org.briarproject.briar.android.view.ArticleMovementMethod;
+import org.briarproject.briar.api.android.MemoryStats;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.Locale;
 import java.util.logging.Logger;
 
+import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.AnyThread;
 import androidx.annotation.AttrRes;
 import androidx.annotation.ColorInt;
 import androidx.annotation.ColorRes;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.annotation.UiThread;
 import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
 import androidx.core.hardware.fingerprint.FingerprintManagerCompat;
 import androidx.core.text.HtmlCompat;
 import androidx.core.util.Consumer;
+import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat;
 
 import static android.content.Context.KEYGUARD_SERVICE;
-import static android.content.Context.POWER_SERVICE;
-import static android.content.Intent.ACTION_GET_CONTENT;
-import static android.content.Intent.ACTION_OPEN_DOCUMENT;
-import static android.content.Intent.CATEGORY_DEFAULT;
-import static android.content.Intent.CATEGORY_OPENABLE;
-import static android.content.Intent.EXTRA_ALLOW_MULTIPLE;
-import static android.content.Intent.EXTRA_MIME_TYPES;
 import static android.content.Intent.FLAG_ACTIVITY_NEW_TASK;
 import static android.os.Build.MANUFACTURER;
 import static android.os.Build.VERSION.SDK_INT;
-import static android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS;
-import static android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS;
 import static android.text.format.DateUtils.DAY_IN_MILLIS;
 import static android.text.format.DateUtils.FORMAT_ABBREV_ALL;
 import static android.text.format.DateUtils.FORMAT_ABBREV_MONTH;
@@ -91,6 +84,8 @@ import static android.text.format.DateUtils.WEEK_IN_MILLIS;
 import static android.text.format.DateUtils.YEAR_IN_MILLIS;
 import static android.view.KeyEvent.ACTION_DOWN;
 import static android.view.KeyEvent.KEYCODE_ENTER;
+import static android.view.View.GONE;
+import static android.view.View.VISIBLE;
 import static android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
 import static android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE;
 import static android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN;
@@ -109,17 +104,20 @@ import static androidx.core.view.ViewCompat.LAYOUT_DIRECTION_RTL;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.DAYS;
 import static java.util.logging.Level.WARNING;
-import static org.briarproject.bramble.util.AndroidUtils.getSupportedImageContentTypes;
+import static java.util.logging.Logger.getLogger;
 import static org.briarproject.bramble.util.LogUtils.logException;
-import static org.briarproject.briar.BuildConfig.APPLICATION_ID;
 import static org.briarproject.briar.android.TestingConstants.EXPIRY_DATE;
 import static org.briarproject.briar.android.reporting.CrashReportActivity.EXTRA_APP_LOGCAT;
 import static org.briarproject.briar.android.reporting.CrashReportActivity.EXTRA_APP_START_TIME;
+import static org.briarproject.briar.android.reporting.CrashReportActivity.EXTRA_INITIAL_COMMENT;
+import static org.briarproject.briar.android.reporting.CrashReportActivity.EXTRA_MEMORY_STATS;
 import static org.briarproject.briar.android.reporting.CrashReportActivity.EXTRA_THROWABLE;
 
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
 public class UiUtils {
+
+	private static final Logger LOG = getLogger(UiUtils.class.getName());
 
 	public static final long MIN_DATE_RESOLUTION = MINUTE_IN_MILLIS;
 	public static final int TEASER_LENGTH = 320;
@@ -137,6 +135,35 @@ public class UiUtils {
 		InputMethodManager imm = requireNonNull(
 				getSystemService(view.getContext(), InputMethodManager.class));
 		imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+	}
+
+	public static void showFragment(FragmentManager fm, Fragment f,
+			@Nullable String tag) {
+		showFragment(fm, f, tag, true);
+	}
+
+	public static void showFragment(FragmentManager fm, Fragment f,
+			@Nullable String tag, boolean addToBackStack) {
+		// don't re-add same (already added/visible) fragment again
+		Fragment fragment = fm.findFragmentByTag(tag);
+		if (fragment != null && fragment.isAdded()) return;
+
+		FragmentTransaction ta = fm.beginTransaction()
+				.setCustomAnimations(R.anim.step_next_in,
+						R.anim.step_previous_out, R.anim.step_previous_in,
+						R.anim.step_next_out)
+				.replace(R.id.fragmentContainer, f, tag);
+		if (addToBackStack) ta.addToBackStack(tag);
+		ta.commit();
+	}
+
+	public static void tryToStartActivity(Context ctx, Intent intent) {
+		try {
+			ctx.startActivity(intent);
+		} catch (ActivityNotFoundException e) {
+			Toast.makeText(ctx, R.string.error_start_activity, LENGTH_LONG)
+					.show();
+		}
 	}
 
 	public static String getContactDisplayName(Author author,
@@ -181,6 +208,11 @@ public class UiUtils {
 		long diff = System.currentTimeMillis() - time;
 		if (diff >= YEAR_IN_MILLIS) flags |= FORMAT_SHOW_YEAR;
 		return DateUtils.formatDateTime(ctx, time, flags);
+	}
+
+	public static String formatDateFull(Context ctx, long time) {
+		return DateUtils.formatDateTime(ctx, time,
+				FORMAT_SHOW_DATE | FORMAT_SHOW_YEAR | FORMAT_ABBREV_ALL);
 	}
 
 	/**
@@ -290,65 +322,12 @@ public class UiUtils {
 		textView.setMovementMethod(new LinkMovementMethod());
 	}
 
-	public static OnClickListener getGoToSettingsListener(Context context) {
-		return (dialog, which) -> {
-			Intent i = new Intent();
-			i.setAction("android.settings.APPLICATION_DETAILS_SETTINGS");
-			i.addCategory(CATEGORY_DEFAULT);
-			i.setData(Uri.parse("package:" + APPLICATION_ID));
-			i.addFlags(FLAG_ACTIVITY_NEW_TASK);
-			context.startActivity(i);
-		};
-	}
-
-	public static Intent createSelectImageIntent(boolean allowMultiple) {
-		Intent intent = new Intent(SDK_INT >= 19 ?
-				ACTION_OPEN_DOCUMENT : ACTION_GET_CONTENT);
-		intent.setType("image/*");
-		intent.addCategory(CATEGORY_OPENABLE);
-		if (SDK_INT >= 19)
-			intent.putExtra(EXTRA_MIME_TYPES, getSupportedImageContentTypes());
-		if (allowMultiple && SDK_INT >= 18)
-			intent.putExtra(EXTRA_ALLOW_MULTIPLE, true);
-		return intent;
-	}
-
 	public static void showOnboardingDialog(Context ctx, String text) {
 		new AlertDialog.Builder(ctx, R.style.OnboardingDialogTheme)
 				.setMessage(text)
 				.setNeutralButton(R.string.got_it,
 						(dialog, which) -> dialog.cancel())
 				.show();
-	}
-
-	public static boolean needsDozeWhitelisting(Context ctx) {
-		if (SDK_INT < 23) return false;
-		PowerManager pm = (PowerManager) ctx.getSystemService(POWER_SERVICE);
-		String packageName = ctx.getPackageName();
-		if (pm == null) throw new AssertionError();
-		return !pm.isIgnoringBatteryOptimizations(packageName);
-	}
-
-	@TargetApi(23)
-	@SuppressLint("BatteryLife")
-	public static Intent getDozeWhitelistingIntent(Context ctx) {
-		Intent i = new Intent();
-		i.setAction(ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
-		i.setData(Uri.parse("package:" + ctx.getPackageName()));
-		return i;
-	}
-
-	/**
-	 * @return true if location is enabled,
-	 * or it isn't required due to this being a SDK < 28 device.
-	 */
-	public static boolean isLocationEnabled(Context ctx) {
-		if (SDK_INT >= 28) {
-			LocationManager lm = ctx.getSystemService(LocationManager.class);
-			return lm.isLocationEnabled();
-		} else {
-			return true;
-		}
 	}
 
 	public static boolean isSamsung7() {
@@ -398,7 +377,6 @@ public class UiUtils {
 	}
 
 	public static boolean hasKeyguardLock(Context ctx) {
-		if (SDK_INT < 21) return false;
 		KeyguardManager keyguardManager =
 				(KeyguardManager) ctx.getSystemService(KEYGUARD_SERVICE);
 		if (keyguardManager == null) return false;
@@ -415,17 +393,40 @@ public class UiUtils {
 	}
 
 	public static void triggerFeedback(Context ctx) {
-		startDevReportActivity(ctx, FeedbackActivity.class, null, null, null);
+		triggerFeedback(ctx, null);
+	}
+
+	public static void triggerFeedback(Context ctx,
+			@Nullable String initialComment) {
+		startDevReportActivity(ctx, FeedbackActivity.class, null, null, null,
+				initialComment);
 	}
 
 	public static void startDevReportActivity(Context ctx,
 			Class<? extends FragmentActivity> activity, @Nullable Throwable t,
-			@Nullable Long appStartTime, @Nullable byte[] logKey) {
+			@Nullable Long appStartTime, @Nullable byte[] logKey, @Nullable
+			String initialComment) {
+		// Collect memory stats from the current process, not the crash
+		// reporter process
+		ActivityManager am =
+				requireNonNull(getSystemService(ctx, ActivityManager.class));
+		MemoryInfo mem = new MemoryInfo();
+		am.getMemoryInfo(mem);
+		Runtime runtime = Runtime.getRuntime();
+		MemoryStats memoryStats = new MemoryStats(mem.totalMem,
+				mem.availMem, mem.threshold, mem.lowMemory,
+				runtime.totalMemory(), runtime.freeMemory(),
+				runtime.maxMemory(), Debug.getNativeHeapSize(),
+				Debug.getNativeHeapAllocatedSize(),
+				Debug.getNativeHeapFreeSize());
+
 		final Intent dialogIntent = new Intent(ctx, activity);
 		dialogIntent.setFlags(FLAG_ACTIVITY_NEW_TASK);
 		dialogIntent.putExtra(EXTRA_THROWABLE, t);
 		dialogIntent.putExtra(EXTRA_APP_START_TIME, appStartTime);
 		dialogIntent.putExtra(EXTRA_APP_LOGCAT, logKey);
+		dialogIntent.putExtra(EXTRA_INITIAL_COMMENT, initialComment);
+		dialogIntent.putExtra(EXTRA_MEMORY_STATS, memoryStats);
 		ctx.startActivity(dialogIntent);
 	}
 
@@ -437,7 +438,6 @@ public class UiUtils {
 				keyEvent.getKeyCode() == KEYCODE_ENTER;
 	}
 
-	@RequiresApi(api = 21)
 	public static void excludeSystemUi(Transition transition) {
 		transition.excludeTarget(android.R.id.statusBarBackground, true);
 		transition.excludeTarget(android.R.id.navigationBarBackground, true);
@@ -479,7 +479,6 @@ public class UiUtils {
 	}
 
 	public static boolean isRtl(Context ctx) {
-		if (SDK_INT < 17) return false;
 		return ctx.getResources().getConfiguration().getLayoutDirection() ==
 				LAYOUT_DIRECTION_RTL;
 	}
@@ -494,30 +493,22 @@ public class UiUtils {
 		return isoCode;
 	}
 
-	public static void showLocationDialog(Context ctx) {
-		AlertDialog.Builder builder =
-				new AlertDialog.Builder(ctx, R.style.BriarDialogTheme);
-		builder.setTitle(R.string.permission_location_setting_title);
-		builder.setMessage(R.string.permission_location_setting_body);
-		builder.setNegativeButton(R.string.cancel, null);
-		builder.setPositiveButton(R.string.permission_location_setting_button,
-				(dialog, which) -> {
-					Intent i = new Intent(ACTION_LOCATION_SOURCE_SETTINGS);
-					try {
-						ctx.startActivity(i);
-					} catch (ActivityNotFoundException e) {
-						Toast.makeText(ctx, R.string.error_start_activity,
-								LENGTH_LONG).show();
-					}
-				});
-		builder.show();
-	}
-
 	public static Drawable getDialogIcon(Context ctx, @DrawableRes int resId) {
 		Drawable icon =
 				VectorDrawableCompat.create(ctx.getResources(), resId, null);
 		setTint(requireNonNull(icon), getColor(ctx, R.color.color_primary));
 		return icon;
+	}
+
+	public static void hideViewOnSmallScreen(View view) {
+		boolean small = isSmallScreenRelativeToFontSize(view.getContext());
+		view.setVisibility(small ? GONE : VISIBLE);
+	}
+
+	private static boolean isSmallScreenRelativeToFontSize(Context ctx) {
+		Configuration config = ctx.getResources().getConfiguration();
+		if (config.fontScale == 0f) return true;
+		return config.screenHeightDp / config.fontScale < 600;
 	}
 
 	/**
@@ -551,4 +542,25 @@ public class UiUtils {
 		activity.getWindow().setSoftInputMode(SOFT_INPUT_ADJUST_RESIZE |
 				SOFT_INPUT_STATE_HIDDEN);
 	}
+
+	public static void launchActivityToOpenFile(Context ctx,
+			ActivityResultLauncher<String[]> docLauncher,
+			ActivityResultLauncher<String> contentLauncher,
+			String contentType) {
+		// Try GET_CONTENT, fall back to OPEN_DOCUMENT if available
+		try {
+			contentLauncher.launch(contentType);
+			return;
+		} catch (ActivityNotFoundException e) {
+			logException(LOG, WARNING, e);
+		}
+		try {
+			docLauncher.launch(new String[] {contentType});
+			return;
+		} catch (ActivityNotFoundException e) {
+			logException(LOG, WARNING, e);
+		}
+		Toast.makeText(ctx, R.string.error_start_activity, LENGTH_LONG).show();
+	}
+
 }

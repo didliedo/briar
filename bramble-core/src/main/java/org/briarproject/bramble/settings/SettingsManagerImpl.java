@@ -3,9 +3,9 @@ package org.briarproject.bramble.settings;
 import org.briarproject.bramble.api.db.DatabaseComponent;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.settings.Settings;
 import org.briarproject.bramble.api.settings.SettingsManager;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.concurrent.Immutable;
 import javax.inject.Inject;
@@ -36,5 +36,11 @@ class SettingsManagerImpl implements SettingsManager {
 	@Override
 	public void mergeSettings(Settings s, String namespace) throws DbException {
 		db.transaction(false, txn -> db.mergeSettings(txn, s, namespace));
+	}
+
+	@Override
+	public void mergeSettings(Transaction txn, Settings s, String namespace)
+			throws DbException {
+		db.mergeSettings(txn, s, namespace);
 	}
 }

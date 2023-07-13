@@ -6,18 +6,21 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import org.briarproject.bramble.api.identity.Author;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
+import org.briarproject.bramble.api.qrcode.QrCodeClassifier.QrCodeType;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.activity.BriarActivity;
 import org.briarproject.briar.android.contact.add.nearby.AddContactState.ContactExchangeFinished;
 import org.briarproject.briar.android.contact.add.nearby.AddContactState.ContactExchangeResult;
 import org.briarproject.briar.android.contact.add.nearby.AddContactState.Failed;
+import org.briarproject.briar.android.contact.add.nearby.AddContactState.Failed.WrongQrCodeType;
+import org.briarproject.briar.android.contact.add.nearby.AddContactState.Failed.WrongQrCodeVersion;
 import org.briarproject.briar.android.contact.add.nearby.AddNearbyContactViewModel.BluetoothDecision;
 import org.briarproject.briar.android.fragment.BaseFragment;
 import org.briarproject.briar.android.fragment.BaseFragment.BaseFragmentListener;
-import org.briarproject.briar.android.util.RequestBluetoothDiscoverable;
+import org.briarproject.briar.android.util.ActivityLaunchers.RequestBluetoothDiscoverable;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.logging.Logger;
 
@@ -34,6 +37,7 @@ import static android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP;
 import static android.widget.Toast.LENGTH_LONG;
 import static java.util.Objects.requireNonNull;
 import static java.util.logging.Logger.getLogger;
+import static org.briarproject.bramble.api.qrcode.QrCodeClassifier.QrCodeType.MAILBOX;
 import static org.briarproject.briar.android.contact.add.nearby.AddNearbyContactViewModel.BluetoothDecision.ACCEPTED;
 import static org.briarproject.briar.android.contact.add.nearby.AddNearbyContactViewModel.BluetoothDecision.REFUSED;
 
@@ -141,9 +145,15 @@ public class AddNearbyContactActivity extends BriarActivity
 			ContactExchangeResult result =
 					((ContactExchangeFinished) state).result;
 			onContactExchangeResult(result);
+		} else if (state instanceof WrongQrCodeType) {
+			QrCodeType qrCodeType = ((WrongQrCodeType) state).qrCodeType;
+			if (qrCodeType == MAILBOX) onMailboxQrCodeScanned();
+			else onWrongQrCodeType();
+		} else if (state instanceof WrongQrCodeVersion) {
+			boolean qrCodeTooOld = ((WrongQrCodeVersion) state).qrCodeTooOld;
+			onWrongQrCodeVersion(qrCodeTooOld);
 		} else if (state instanceof Failed) {
-			Boolean qrCodeTooOld = ((Failed) state).qrCodeTooOld;
-			onAddingContactFailed(qrCodeTooOld);
+			showErrorFragment();
 		}
 	}
 
@@ -170,20 +180,27 @@ public class AddNearbyContactActivity extends BriarActivity
 		} else throw new AssertionError();
 	}
 
-	private void onAddingContactFailed(@Nullable Boolean qrCodeTooOld) {
-		if (qrCodeTooOld == null) {
-			showErrorFragment();
-		} else {
-			String msg;
-			if (qrCodeTooOld) {
-				msg = getString(R.string.qr_code_too_old,
-						getString(R.string.app_name));
-			} else {
-				msg = getString(R.string.qr_code_too_new,
-						getString(R.string.app_name));
-			}
-			showNextFragment(AddNearbyContactErrorFragment.newInstance(msg));
-		}
+	private void onMailboxQrCodeScanned() {
+		String title = getString(R.string.qr_code_invalid);
+		String msg = getString(R.string.mailbox_qr_code_for_contact);
+		showNextFragment(
+				AddNearbyContactErrorFragment.newInstance(title, msg, false));
+	}
+
+	private void onWrongQrCodeType() {
+		String title = getString(R.string.qr_code_invalid);
+		String msg = getString(R.string.qr_code_format_unknown);
+		showNextFragment(
+				AddNearbyContactErrorFragment.newInstance(title, msg, false));
+	}
+
+	private void onWrongQrCodeVersion(boolean qrCodeTooOld) {
+		String title = getString(R.string.qr_code_invalid);
+		String msg;
+		if (qrCodeTooOld) msg = getString(R.string.qr_code_too_old_1);
+		else msg = getString(R.string.qr_code_too_new_1);
+		showNextFragment(
+				AddNearbyContactErrorFragment.newInstance(title, msg, false));
 	}
 
 	private void showErrorFragment() {

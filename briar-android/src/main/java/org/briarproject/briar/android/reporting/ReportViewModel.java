@@ -4,7 +4,6 @@ import android.app.Application;
 import android.os.Handler;
 import android.os.Looper;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.Plugin;
 import org.briarproject.bramble.api.plugin.PluginManager;
 import org.briarproject.bramble.api.plugin.TorConstants;
@@ -18,6 +17,9 @@ import org.briarproject.briar.android.reporting.ReportData.MultiReportInfo;
 import org.briarproject.briar.android.reporting.ReportData.ReportItem;
 import org.briarproject.briar.android.viewmodel.LiveEvent;
 import org.briarproject.briar.android.viewmodel.MutableLiveEvent;
+import org.briarproject.briar.api.android.MemoryStats;
+import org.briarproject.briar.api.android.NetworkUsageMetrics;
+import org.briarproject.nullsafety.NotNullByDefault;
 import org.json.JSONException;
 
 import java.io.File;
@@ -64,15 +66,18 @@ class ReportViewModel extends AndroidViewModel {
 	private final MutableLiveEvent<Integer> closeReport =
 			new MutableLiveEvent<>();
 	private boolean isFeedback;
+	@Nullable
+	private String initialComment;
 
 	@Inject
 	ReportViewModel(@NonNull Application application,
+			NetworkUsageMetrics networkUsageMetrics,
 			CachingLogHandler logHandler,
 			LogDecrypter logDecrypter,
 			DevReporter reporter,
 			PluginManager pluginManager) {
 		super(application);
-		collector = new BriarReportCollector(application);
+		collector = new BriarReportCollector(application, networkUsageMetrics);
 		this.logHandler = logHandler;
 		this.logDecrypter = logDecrypter;
 		this.reporter = reporter;
@@ -80,7 +85,9 @@ class ReportViewModel extends AndroidViewModel {
 	}
 
 	void init(@Nullable Throwable t, long appStartTime,
-			@Nullable byte[] logKey) {
+			@Nullable byte[] logKey, @Nullable String initialComment,
+			MemoryStats memoryStats) {
+		this.initialComment = initialComment;
 		isFeedback = t == null;
 		if (reportData.getValue() == null) new SingleShotAndroidExecutor(() -> {
 			String decryptedLogs;
@@ -97,10 +104,15 @@ class ReportViewModel extends AndroidViewModel {
 							logHandler.getRecentLogRecords());
 				}
 			}
-			ReportData data =
-					collector.collectReportData(t, appStartTime, decryptedLogs);
+			ReportData data = collector.collectReportData(t, appStartTime,
+					decryptedLogs, memoryStats);
 			reportData.postValue(data);
 		}).start();
+	}
+
+	@Nullable
+	String getInitialComment() {
+		return initialComment;
 	}
 
 	boolean isFeedback() {
@@ -140,7 +152,7 @@ class ReportViewModel extends AndroidViewModel {
 
 	/**
 	 * The content of the report that will be loaded after
-	 * {@link #init(Throwable, long, byte[])} was called.
+	 * {@link #init(Throwable, long, byte[], String, MemoryStats)} was called.
 	 */
 	LiveData<ReportData> getReportData() {
 		return reportData;

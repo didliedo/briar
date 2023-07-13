@@ -1,5 +1,6 @@
 package org.briarproject.bramble.plugin;
 
+import org.briarproject.bramble.api.Cancellable;
 import org.briarproject.bramble.api.connection.ConnectionManager;
 import org.briarproject.bramble.api.connection.ConnectionRegistry;
 import org.briarproject.bramble.api.contact.ContactId;
@@ -20,13 +21,11 @@ import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.properties.TransportPropertyManager;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.system.TaskScheduler;
-import org.briarproject.bramble.api.system.TaskScheduler.Cancellable;
 import org.briarproject.bramble.test.BrambleMockTestCase;
 import org.briarproject.bramble.test.ImmediateExecutor;
 import org.briarproject.bramble.test.RunAction;
 import org.jmock.Expectations;
-import org.jmock.lib.legacy.ClassImposteriser;
-import org.junit.Before;
+import org.jmock.imposters.ByteBuddyClassImposteriser;
 import org.junit.Test;
 
 import java.security.SecureRandom;
@@ -59,22 +58,18 @@ public class PollerImplTest extends BrambleMockTestCase {
 	private final SecureRandom random;
 
 	private final Executor ioExecutor = new ImmediateExecutor();
-	private final Executor wakefulIoExecutor = new ImmediateExecutor();
 	private final TransportId transportId = getTransportId();
 	private final ContactId contactId = getContactId();
 	private final TransportProperties properties = new TransportProperties();
 	private final int pollingInterval = 60 * 1000;
 	private final long now = System.currentTimeMillis();
 
-	private PollerImpl poller;
+	private final PollerImpl poller;
 
 	public PollerImplTest() {
-		context.setImposteriser(ClassImposteriser.INSTANCE);
+		context.setImposteriser(ByteBuddyClassImposteriser.INSTANCE);
 		random = context.mock(SecureRandom.class);
-	}
-
-	@Before
-	public void setUp() {
+		Executor wakefulIoExecutor = new ImmediateExecutor();
 		poller = new PollerImpl(ioExecutor, wakefulIoExecutor, scheduler,
 				connectionManager, connectionRegistry, pluginManager,
 				transportPropertyManager, random, clock);

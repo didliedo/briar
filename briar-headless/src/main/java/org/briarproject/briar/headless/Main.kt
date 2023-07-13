@@ -6,10 +6,13 @@ import com.github.ajalt.clikt.parameters.options.default
 import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.types.int
+import org.bouncycastle.util.encoders.Base64.toBase64String
 import org.briarproject.bramble.BrambleCoreEagerSingletons
+import org.briarproject.bramble.BrambleJavaEagerSingletons
+import org.briarproject.bramble.util.OsUtils.isLinux
+import org.briarproject.bramble.util.OsUtils.isMac
 import org.briarproject.briar.BriarCoreEagerSingletons
 import org.slf4j.impl.SimpleLogger.DEFAULT_LOG_LEVEL_KEY
-import org.spongycastle.util.encoders.Base64.toBase64String
 import java.io.File
 import java.io.File.separator
 import java.io.IOException
@@ -26,7 +29,8 @@ import java.util.logging.Level.INFO
 import java.util.logging.Level.WARNING
 import java.util.logging.LogManager
 
-private const val DEFAULT_PORT = 7000
+// On macOS, port 7000 is used by ControlCenter (probably AirPlay), so use a different port
+private val DEFAULT_PORT = if (isMac()) 7001 else 7000
 private val DEFAULT_DATA_DIR = getProperty("user.home") + separator + ".briar"
 
 private class Main : CliktCommand(
@@ -75,6 +79,7 @@ private class Main : CliktCommand(
         // We need to load the eager singletons directly after making the
         // dependency graphs
         BrambleCoreEagerSingletons.Helper.injectEagerSingletons(app)
+        BrambleJavaEagerSingletons.Helper.injectEagerSingletons(app)
         BriarCoreEagerSingletons.Helper.injectEagerSingletons(app)
         HeadlessEagerSingletons.Helper.injectEagerSingletons(app)
 
@@ -90,11 +95,13 @@ private class Main : CliktCommand(
         } else if (!file.isDirectory) {
             throw IOException("Data dir is not a directory: ${file.absolutePath}")
         }
-        val perms = HashSet<PosixFilePermission>()
-        perms.add(OWNER_READ)
-        perms.add(OWNER_WRITE)
-        perms.add(OWNER_EXECUTE)
-        setPosixFilePermissions(file.toPath(), perms)
+        if (isLinux() || isMac()) {
+            val perms = HashSet<PosixFilePermission>()
+            perms.add(OWNER_READ)
+            perms.add(OWNER_WRITE)
+            perms.add(OWNER_EXECUTE)
+            setPosixFilePermissions(file.toPath(), perms)
+        }
         return file
     }
 

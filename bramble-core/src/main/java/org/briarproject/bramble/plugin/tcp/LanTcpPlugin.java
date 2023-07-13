@@ -4,13 +4,13 @@ import org.briarproject.bramble.api.FormatException;
 import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.keyagreement.KeyAgreementConnection;
 import org.briarproject.bramble.api.keyagreement.KeyAgreementListener;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.Backoff;
 import org.briarproject.bramble.api.plugin.PluginCallback;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.plugin.duplex.DuplexTransportConnection;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.settings.Settings;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -92,7 +92,7 @@ class LanTcpPlugin extends TcpPlugin {
 			Executor wakefulIoExecutor,
 			Backoff backoff,
 			PluginCallback callback,
-			int maxLatency,
+			long maxLatency,
 			int maxIdleTime,
 			int connectionTimeout) {
 		super(ioExecutor, wakefulIoExecutor, backoff, callback, maxLatency,
@@ -285,7 +285,7 @@ class LanTcpPlugin extends TcpPlugin {
 				if (ip.length == 16) addrs.add(InetAddress.getByAddress(ip));
 			}
 			return addrs;
-		} catch (IllegalArgumentException | UnknownHostException e) {
+		} catch (FormatException | UnknownHostException e) {
 			return emptyList();
 		}
 	}
@@ -419,7 +419,7 @@ class LanTcpPlugin extends TcpPlugin {
 	private InetSocketAddress parseSocketAddress(BdfList descriptor)
 			throws FormatException {
 		byte[] address = descriptor.getRaw(1);
-		int port = descriptor.getLong(2).intValue();
+		int port = descriptor.getInt(2);
 		if (port < 1 || port > MAX_16_BIT_UNSIGNED) throw new FormatException();
 		try {
 			InetAddress addr = InetAddress.getByAddress(address);

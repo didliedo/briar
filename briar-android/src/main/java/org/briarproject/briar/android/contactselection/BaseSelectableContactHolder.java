@@ -4,10 +4,10 @@ import android.view.View;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.contact.ContactItemViewHolder;
 import org.briarproject.briar.android.contact.OnContactClickListener;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.Nullable;
 
@@ -17,7 +17,7 @@ import static org.briarproject.briar.android.util.UiUtils.GREY_OUT;
 
 @UiThread
 @NotNullByDefault
-public class BaseSelectableContactHolder<I extends SelectableContactItem>
+public abstract class BaseSelectableContactHolder<I extends BaseSelectableContactItem>
 		extends ContactItemViewHolder<I> {
 
 	private final CheckBox checkBox;

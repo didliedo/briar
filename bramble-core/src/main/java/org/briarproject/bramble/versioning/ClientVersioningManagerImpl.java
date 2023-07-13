@@ -15,7 +15,6 @@ import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager.OpenDatabaseHook;
 import org.briarproject.bramble.api.lifecycle.Service;
 import org.briarproject.bramble.api.lifecycle.ServiceException;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.ClientId;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Group.Visibility;
@@ -29,6 +28,7 @@ import org.briarproject.bramble.api.versioning.ClientMajorVersion;
 import org.briarproject.bramble.api.versioning.ClientVersion;
 import org.briarproject.bramble.api.versioning.ClientVersioningManager;
 import org.briarproject.bramble.api.versioning.event.ClientVersionUpdatedEvent;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -50,6 +50,7 @@ import static java.util.Collections.emptyList;
 import static org.briarproject.bramble.api.sync.Group.Visibility.INVISIBLE;
 import static org.briarproject.bramble.api.sync.Group.Visibility.SHARED;
 import static org.briarproject.bramble.api.sync.Group.Visibility.VISIBLE;
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_DO_NOT_SHARE;
 import static org.briarproject.bramble.versioning.ClientVersioningConstants.MSG_KEY_LOCAL;
 import static org.briarproject.bramble.versioning.ClientVersioningConstants.MSG_KEY_UPDATE_VERSION;
 
@@ -173,8 +174,8 @@ class ClientVersioningManagerImpl implements ClientVersioningManager,
 	}
 
 	@Override
-	public boolean incomingMessage(Transaction txn, Message m, Metadata meta)
-			throws DbException, InvalidMessageException {
+	public DeliveryAction incomingMessage(Transaction txn, Message m,
+			Metadata meta) throws DbException, InvalidMessageException {
 		try {
 			// Parse the new remote update
 			Update newRemoteUpdate = parseUpdate(clientHelper.toList(m));
@@ -187,7 +188,7 @@ class ClientVersioningManagerImpl implements ClientVersioningManager,
 					&& latest.remote.updateVersion > newRemoteUpdateVersion) {
 				db.deleteMessage(txn, m.getId());
 				db.deleteMessageMetadata(txn, m.getId());
-				return false;
+				return ACCEPT_DO_NOT_SHARE;
 			}
 			// Load and parse the latest local update
 			if (latest.local == null) throw new DbException();
@@ -227,21 +228,17 @@ class ClientVersioningManagerImpl implements ClientVersioningManager,
 				Contact contact = db.getContact(txn, c);
 				callVisibilityHooks(txn, contact, before, after);
 			}
-			// Broadcast events for any new client versions
-			Set<ClientVersion> oldRemoteVersions = new HashSet<>();
-			for (ClientState cs : oldRemoteStates) {
-				oldRemoteVersions.add(cs.clientVersion);
-			}
+			// Broadcast events for any client version update
 			for (ClientState cs : newRemoteStates) {
-				if (!oldRemoteVersions.contains(cs.clientVersion)) {
-					txn.attach(new ClientVersionUpdatedEvent(c,
-							cs.clientVersion));
+				if (!oldRemoteStates.contains(cs)) {
+					txn.attach(
+							new ClientVersionUpdatedEvent(c, cs.clientVersion));
 				}
 			}
 		} catch (FormatException e) {
 			throw new InvalidMessageException(e);
 		}
-		return false;
+		return ACCEPT_DO_NOT_SHARE;
 	}
 
 	private void storeClientVersions(Transaction txn,
@@ -304,8 +301,8 @@ class ClientVersioningManagerImpl implements ClientVersioningManager,
 		for (int i = 0; i < size; i++) {
 			BdfList cv = body.getList(i);
 			ClientId clientId = new ClientId(cv.getString(0));
-			int majorVersion = cv.getLong(1).intValue();
-			int minorVersion = cv.getLong(2).intValue();
+			int majorVersion = cv.getInt(1);
+			int minorVersion = cv.getInt(2);
 			parsed.add(new ClientVersion(clientId, majorVersion, minorVersion));
 		}
 		return parsed;
@@ -411,8 +408,8 @@ class ClientVersioningManagerImpl implements ClientVersioningManager,
 			throws FormatException {
 		// Client ID, major version, minor version, active
 		ClientId clientId = new ClientId(clientState.getString(0));
-		int majorVersion = clientState.getLong(1).intValue();
-		int minorVersion = clientState.getLong(2).intValue();
+		int majorVersion = clientState.getInt(1);
+		int minorVersion = clientState.getInt(2);
 		boolean active = clientState.getBoolean(3);
 		return new ClientState(clientId, majorVersion, minorVersion, active);
 	}

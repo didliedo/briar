@@ -2,7 +2,6 @@ package org.briarproject.bramble.plugin.tcp;
 
 import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.keyagreement.KeyAgreementListener;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.Backoff;
 import org.briarproject.bramble.api.plugin.Plugin.State;
 import org.briarproject.bramble.api.plugin.PluginCallback;
@@ -12,7 +11,7 @@ import org.briarproject.bramble.api.plugin.duplex.DuplexTransportConnection;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.settings.Settings;
 import org.briarproject.bramble.test.BrambleTestCase;
-import org.junit.Before;
+import org.briarproject.nullsafety.NotNullByDefault;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -46,13 +45,11 @@ public class LanTcpPluginTest extends BrambleTestCase {
 
 	private final Backoff backoff = new TestBackoff();
 	private final ExecutorService ioExecutor = newCachedThreadPool();
+	private final Callback callback = new Callback();
 
-	private Callback callback = null;
-	private LanTcpPlugin plugin = null;
+	private final LanTcpPlugin plugin;
 
-	@Before
-	public void setUp() {
-		callback = new Callback();
+	public LanTcpPluginTest() {
 		plugin = new LanTcpPlugin(ioExecutor, ioExecutor, backoff, callback,
 				0, 0, 1000) {
 			@Override
@@ -220,13 +217,13 @@ public class LanTcpPluginTest extends BrambleTestCase {
 		// The plugin should have bound a socket and stored the port number
 		BdfList descriptor = kal.getDescriptor();
 		assertEquals(3, descriptor.size());
-		assertEquals(TRANSPORT_ID_LAN, descriptor.getLong(0).longValue());
+		assertEquals(TRANSPORT_ID_LAN, descriptor.getInt(0).intValue());
 		byte[] address = descriptor.getRaw(1);
 		InetAddress addr = InetAddress.getByAddress(address);
 		assertTrue(addr instanceof Inet4Address);
 		assertFalse(addr.isLoopbackAddress());
 		assertTrue(addr.isLinkLocalAddress() || addr.isSiteLocalAddress());
-		int port = descriptor.getLong(2).intValue();
+		int port = descriptor.getInt(2);
 		assertTrue(port > 0 && port < 65536);
 		// The plugin should be listening on the port
 		InetSocketAddress socketAddr = new InetSocketAddress(addr, port);

@@ -6,24 +6,29 @@ import dagger.Provides
 import org.briarproject.bramble.account.AccountModule
 import org.briarproject.bramble.api.FeatureFlags
 import org.briarproject.bramble.api.db.DatabaseConfig
+import org.briarproject.bramble.api.mailbox.MailboxDirectory
 import org.briarproject.bramble.api.plugin.PluginConfig
+import org.briarproject.bramble.api.plugin.TorConstants.DEFAULT_CONTROL_PORT
+import org.briarproject.bramble.api.plugin.TorConstants.DEFAULT_SOCKS_PORT
+import org.briarproject.bramble.api.plugin.TorControlPort
 import org.briarproject.bramble.api.plugin.TorDirectory
+import org.briarproject.bramble.api.plugin.TorSocksPort
 import org.briarproject.bramble.api.plugin.TransportId
 import org.briarproject.bramble.api.plugin.duplex.DuplexPluginFactory
 import org.briarproject.bramble.api.plugin.simplex.SimplexPluginFactory
 import org.briarproject.bramble.battery.DefaultBatteryManagerModule
 import org.briarproject.bramble.event.DefaultEventExecutorModule
-import org.briarproject.bramble.network.JavaNetworkModule
-import org.briarproject.bramble.plugin.tor.CircumventionModule
+import org.briarproject.bramble.plugin.tor.MacTorPluginFactory
 import org.briarproject.bramble.plugin.tor.UnixTorPluginFactory
-import org.briarproject.bramble.socks.SocksModule
+import org.briarproject.bramble.plugin.tor.WindowsTorPluginFactory
 import org.briarproject.bramble.system.ClockModule
 import org.briarproject.bramble.system.DefaultTaskSchedulerModule
+import org.briarproject.bramble.system.DefaultThreadFactoryModule
 import org.briarproject.bramble.system.DefaultWakefulIoExecutorModule
 import org.briarproject.bramble.system.DesktopSecureRandomModule
-import org.briarproject.bramble.system.JavaSystemModule
 import org.briarproject.bramble.util.OsUtils.isLinux
 import org.briarproject.bramble.util.OsUtils.isMac
+import org.briarproject.bramble.util.OsUtils.isWindows
 import org.briarproject.briar.headless.blogs.HeadlessBlogModule
 import org.briarproject.briar.headless.contact.HeadlessContactModule
 import org.briarproject.briar.headless.event.HeadlessEventModule
@@ -36,21 +41,18 @@ import javax.inject.Singleton
 @Module(
     includes = [
         AccountModule::class,
-        CircumventionModule::class,
         ClockModule::class,
         DefaultBatteryManagerModule::class,
         DefaultEventExecutorModule::class,
         DefaultTaskSchedulerModule::class,
         DefaultWakefulIoExecutorModule::class,
+        DefaultThreadFactoryModule::class,
         DesktopSecureRandomModule::class,
         HeadlessBlogModule::class,
         HeadlessContactModule::class,
         HeadlessEventModule::class,
         HeadlessForumModule::class,
-        HeadlessMessagingModule::class,
-        JavaNetworkModule::class,
-        JavaSystemModule::class,
-        SocksModule::class
+        HeadlessMessagingModule::class
     ]
 )
 internal class HeadlessModule(private val appDir: File) {
@@ -68,15 +70,38 @@ internal class HeadlessModule(private val appDir: File) {
     }
 
     @Provides
+    @MailboxDirectory
+    internal fun provideMailboxDirectory(): File {
+        return File(appDir, "mailbox")
+    }
+
+    @Provides
     @TorDirectory
     internal fun provideTorDirectory(): File {
         return File(appDir, "tor")
     }
 
     @Provides
-    internal fun providePluginConfig(tor: UnixTorPluginFactory): PluginConfig {
-        val duplex: List<DuplexPluginFactory> =
-            if (isLinux() || isMac()) listOf(tor) else emptyList()
+    @TorSocksPort
+    internal fun provideTorSocksPort(): Int = DEFAULT_SOCKS_PORT
+
+    @Provides
+    @TorControlPort
+    internal fun provideTorControlPort(): Int = DEFAULT_CONTROL_PORT
+
+    @Provides
+    @Singleton
+    internal fun providePluginConfig(
+        unixTor: UnixTorPluginFactory,
+        macTor: MacTorPluginFactory,
+        winTor: WindowsTorPluginFactory
+    ): PluginConfig {
+        val duplex: List<DuplexPluginFactory> = when {
+            isLinux() -> listOf(unixTor)
+            isMac() -> listOf(macTor)
+            isWindows() -> listOf(winTor)
+            else -> emptyList()
+        }
         return object : PluginConfig {
             override fun getDuplexFactories(): Collection<DuplexPluginFactory> = duplex
             override fun getSimplexFactories(): Collection<SimplexPluginFactory> = emptyList()
@@ -94,6 +119,8 @@ internal class HeadlessModule(private val appDir: File) {
         override fun shouldEnableImageAttachments() = false
         override fun shouldEnableProfilePictures() = false
         override fun shouldEnableDisappearingMessages() = false
-        override fun shouldEnableConnectViaBluetooth() = false
+        override fun shouldEnablePrivateGroupsInCore() = false
+        override fun shouldEnableForumsInCore() = true
+        override fun shouldEnableBlogsInCore() = true
     }
 }

@@ -3,9 +3,6 @@ package org.briarproject.bramble.plugin.modem;
 import org.briarproject.bramble.api.Pair;
 import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.keyagreement.KeyAgreementListener;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.plugin.ConnectionHandler;
 import org.briarproject.bramble.api.plugin.PluginCallback;
 import org.briarproject.bramble.api.plugin.PluginException;
@@ -16,6 +13,9 @@ import org.briarproject.bramble.api.plugin.duplex.DuplexTransportConnection;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.rendezvous.KeyMaterialSource;
 import org.briarproject.bramble.api.rendezvous.RendezvousEndpoint;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -50,14 +50,14 @@ class ModemPlugin implements DuplexPlugin, Modem.Callback {
 	private final ModemFactory modemFactory;
 	private final SerialPortList serialPortList;
 	private final PluginCallback callback;
-	private final int maxLatency;
+	private final long maxLatency;
 	private final AtomicBoolean used = new AtomicBoolean(false);
 	private final PluginState state = new PluginState();
 
 	private volatile Modem modem = null;
 
 	ModemPlugin(ModemFactory modemFactory, SerialPortList serialPortList,
-			PluginCallback callback, int maxLatency) {
+			PluginCallback callback, long maxLatency) {
 		this.modemFactory = modemFactory;
 		this.serialPortList = serialPortList;
 		this.callback = callback;
@@ -70,7 +70,7 @@ class ModemPlugin implements DuplexPlugin, Modem.Callback {
 	}
 
 	@Override
-	public int getMaxLatency() {
+	public long getMaxLatency() {
 		return maxLatency;
 	}
 

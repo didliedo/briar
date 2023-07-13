@@ -1,6 +1,7 @@
 package org.briarproject.briar.android.account;
 
 import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -8,17 +9,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ProgressBar;
+import android.widget.Toast;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.account.PowerView.OnCheckedChangedListener;
-import org.briarproject.briar.android.util.UiUtils;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import androidx.annotation.Nullable;
 
 import static android.view.View.INVISIBLE;
 import static android.view.View.VISIBLE;
+import static android.widget.Toast.LENGTH_LONG;
+import static org.briarproject.android.dontkillmelib.DozeUtils.getDozeWhitelistingIntent;
 import static org.briarproject.briar.android.activity.RequestCodes.REQUEST_DOZE_WHITELISTING;
 import static org.briarproject.briar.android.util.UiUtils.showOnboardingDialog;
 
@@ -32,7 +35,8 @@ public class DozeFragment extends SetupFragment
 	private DozeView dozeView;
 	private HuaweiProtectedAppsView huaweiProtectedAppsView;
 	private HuaweiAppLaunchView huaweiAppLaunchView;
-	private XiaomiView xiaomiView;
+	private XiaomiRecentAppsView xiaomiRecentAppsView;
+	private XiaomiLockAppsView xiaomiLockAppsView;
 	private Button next;
 	private boolean secondAttempt = false;
 
@@ -44,7 +48,7 @@ public class DozeFragment extends SetupFragment
 	public View onCreateView(LayoutInflater inflater,
 			@Nullable ViewGroup container,
 			@Nullable Bundle savedInstanceState) {
-		requireActivity().setTitle(getString(R.string.setup_doze_title));
+		requireActivity().setTitle(getString(R.string.dnkm_doze_title));
 		setHasOptionsMenu(false);
 		View v = inflater.inflate(R.layout.fragment_setup_doze, container,
 				false);
@@ -54,8 +58,10 @@ public class DozeFragment extends SetupFragment
 		huaweiProtectedAppsView.setOnCheckedChangedListener(this);
 		huaweiAppLaunchView = v.findViewById(R.id.huaweiAppLaunchView);
 		huaweiAppLaunchView.setOnCheckedChangedListener(this);
-		xiaomiView = v.findViewById(R.id.xiaomiView);
-		xiaomiView.setOnCheckedChangedListener(this);
+		xiaomiRecentAppsView = v.findViewById(R.id.xiaomiRecentAppsView);
+		xiaomiRecentAppsView.setOnCheckedChangedListener(this);
+		xiaomiLockAppsView = v.findViewById(R.id.xiaomiLockAppsView);
+		xiaomiLockAppsView.setOnCheckedChangedListener(this);
 		next = v.findViewById(R.id.next);
 		ProgressBar progressBar = v.findViewById(R.id.progress);
 
@@ -80,7 +86,7 @@ public class DozeFragment extends SetupFragment
 
 	@Override
 	protected String getHelpText() {
-		return getString(R.string.setup_doze_explanation);
+		return getString(R.string.dnkm_doze_explanation);
 	}
 
 	@Override
@@ -102,14 +108,20 @@ public class DozeFragment extends SetupFragment
 		next.setEnabled(dozeView.isChecked() &&
 				huaweiProtectedAppsView.isChecked() &&
 				huaweiAppLaunchView.isChecked() &&
-				xiaomiView.isChecked());
+				xiaomiRecentAppsView.isChecked() &&
+				xiaomiLockAppsView.isChecked());
 	}
 
 	@SuppressLint("BatteryLife")
 	private void askForDozeWhitelisting() {
 		if (getContext() == null) return;
-		Intent i = UiUtils.getDozeWhitelistingIntent(getContext());
-		startActivityForResult(i, REQUEST_DOZE_WHITELISTING);
+		Intent i = getDozeWhitelistingIntent(getContext());
+		try {
+			startActivityForResult(i, REQUEST_DOZE_WHITELISTING);
+		} catch (ActivityNotFoundException e) {
+			Toast.makeText(requireContext(),
+					R.string.error_start_activity, LENGTH_LONG).show();
+		}
 	}
 
 	@Override

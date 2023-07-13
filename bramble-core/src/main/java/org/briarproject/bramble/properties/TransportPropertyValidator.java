@@ -7,10 +7,10 @@ import org.briarproject.bramble.api.client.ClientHelper;
 import org.briarproject.bramble.api.data.BdfDictionary;
 import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.data.MetadataEncoder;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.system.Clock;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.concurrent.Immutable;
 
@@ -27,7 +27,10 @@ class TransportPropertyValidator extends BdfMessageValidator {
 
 	TransportPropertyValidator(ClientHelper clientHelper,
 			MetadataEncoder metadataEncoder, Clock clock) {
-		super(clientHelper, metadataEncoder, clock);
+		// Accept transport properties in non-canonical form
+		// TODO: Remove this after a reasonable migration period
+		//  (added 2023-02-17)
+		super(clientHelper, metadataEncoder, clock, false);
 	}
 
 	@Override

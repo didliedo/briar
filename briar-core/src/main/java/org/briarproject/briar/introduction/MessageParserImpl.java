@@ -8,12 +8,12 @@ import org.briarproject.bramble.api.data.BdfDictionary;
 import org.briarproject.bramble.api.data.BdfEntry;
 import org.briarproject.bramble.api.data.BdfList;
 import org.briarproject.bramble.api.identity.Author;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.sync.Message;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.briar.api.client.SessionId;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.Map;
 
@@ -59,8 +59,8 @@ class MessageParserImpl implements MessageParser {
 	@Override
 	public MessageMetadata parseMetadata(BdfDictionary d)
 			throws FormatException {
-		MessageType type = MessageType
-				.fromValue(d.getLong(MSG_KEY_MESSAGE_TYPE).intValue());
+		MessageType type =
+				MessageType.fromValue(d.getInt(MSG_KEY_MESSAGE_TYPE));
 		byte[] sessionIdBytes = d.getOptionalRaw(MSG_KEY_SESSION_ID);
 		SessionId sessionId =
 				sessionIdBytes == null ? null : new SessionId(sessionIdBytes);

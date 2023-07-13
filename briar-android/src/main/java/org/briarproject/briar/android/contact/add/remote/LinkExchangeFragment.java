@@ -1,26 +1,24 @@
 package org.briarproject.briar.android.contact.add.remote;
 
-import android.animation.ObjectAnimator;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.widget.Button;
-import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.fragment.BaseFragment;
+import org.briarproject.briar.android.view.InfoView;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.regex.Matcher;
 
@@ -33,12 +31,12 @@ import androidx.lifecycle.ViewModelProvider;
 import static android.content.Context.CLIPBOARD_SERVICE;
 import static android.widget.Toast.LENGTH_SHORT;
 import static org.briarproject.bramble.api.contact.HandshakeLinkConstants.LINK_REGEX;
+import static org.briarproject.briar.android.util.UiUtils.hideViewOnSmallScreen;
 import static org.briarproject.briar.android.util.UiUtils.observeOnce;
 
 @MethodsNotNullByDefault
 @ParametersNotNullByDefault
-public class LinkExchangeFragment extends BaseFragment
-		implements OnGlobalLayoutListener {
+public class LinkExchangeFragment extends BaseFragment {
 
 	private static final String TAG = LinkExchangeFragment.class.getName();
 
@@ -59,7 +57,7 @@ public class LinkExchangeFragment extends BaseFragment
 	@Override
 	public void injectFragment(ActivityComponent component) {
 		component.inject(this);
-		viewModel = new ViewModelProvider(getActivity(), viewModelFactory)
+		viewModel = new ViewModelProvider(requireActivity(), viewModelFactory)
 				.get(AddContactViewModel.class);
 	}
 
@@ -92,29 +90,13 @@ public class LinkExchangeFragment extends BaseFragment
 
 		observeOnce(viewModel.getHandshakeLink(), this,
 				this::onHandshakeLinkLoaded);
-
-		if (savedInstanceState == null) {
-			ScrollView scrollView = (ScrollView) v;
-			// we need to wait for views to be laid out to get the heights
-			scrollView.getViewTreeObserver().addOnGlobalLayoutListener(this);
-		}
-
 		return v;
 	}
 
 	@Override
-	public void onGlobalLayout() {
-		ScrollView scrollView = (ScrollView) requireView();
-		View layout = scrollView.getChildAt(0);
-		int scrollBy = layout.getHeight() - scrollView.getHeight();
-		if (scrollBy > 0) {
-			// smoothScrollTo() is too fast due to the transition animation
-			ObjectAnimator animator = ObjectAnimator
-					.ofInt(scrollView, "scrollY", scrollBy);
-			animator.setDuration(1000);
-			animator.start();
-		}
-		layout.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+	public void onStart() {
+		super.onStart();
+		hideViewOnSmallScreen(requireView().findViewById(R.id.imageView));
 	}
 
 	private void onHandshakeLinkLoaded(String link) {
@@ -140,6 +122,9 @@ public class LinkExchangeFragment extends BaseFragment
 						.setType("text/plain")
 						.startChooser());
 		shareButton.setEnabled(true);
+
+		InfoView infoText = v.findViewById(R.id.infoView);
+		infoText.setText(R.string.info_both_must_enter_links);
 
 		Button continueButton = v.findViewById(R.id.addButton);
 		continueButton.setOnClickListener(view -> onContinueButtonClicked());

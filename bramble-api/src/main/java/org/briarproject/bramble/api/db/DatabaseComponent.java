@@ -10,7 +10,6 @@ import org.briarproject.bramble.api.crypto.SecretKey;
 import org.briarproject.bramble.api.identity.Author;
 import org.briarproject.bramble.api.identity.AuthorId;
 import org.briarproject.bramble.api.identity.Identity;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.settings.Settings;
 import org.briarproject.bramble.api.sync.Ack;
@@ -27,17 +26,25 @@ import org.briarproject.bramble.api.sync.validation.MessageState;
 import org.briarproject.bramble.api.transport.KeySetId;
 import org.briarproject.bramble.api.transport.TransportKeySet;
 import org.briarproject.bramble.api.transport.TransportKeys;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.ThreadSafe;
 
 /**
  * Encapsulates the database implementation and exposes high-level operations
  * to other components.
+ * <p>
+ * With the exception of the {@link #open(SecretKey, MigrationListener)} and
+ * {@link #close()} methods, which must not be called concurrently, the
+ * database can be accessed from any thread. See {@link TransactionManager}
+ * for locking behaviour.
  */
+@ThreadSafe
 @NotNullByDefault
 public interface DatabaseComponent extends TransactionManager {
 
@@ -101,7 +108,7 @@ public interface DatabaseComponent extends TransactionManager {
 	/**
 	 * Stores a transport.
 	 */
-	void addTransport(Transaction txn, TransportId t, int maxLatency)
+	void addTransport(Transaction txn, TransportId t, long maxLatency)
 			throws DbException;
 
 	/**
@@ -117,6 +124,13 @@ public interface DatabaseComponent extends TransactionManager {
 	 */
 	KeySetId addTransportKeys(Transaction txn, PendingContactId p,
 			TransportKeys k) throws DbException;
+
+	/**
+	 * Returns true if there are any acks to send to the given contact.
+	 * <p/>
+	 * Read-only.
+	 */
+	boolean containsAcksToSend(Transaction txn, ContactId c) throws DbException;
 
 	/**
 	 * Returns true if the database contains the given contact for the given
@@ -143,11 +157,33 @@ public interface DatabaseComponent extends TransactionManager {
 	boolean containsIdentity(Transaction txn, AuthorId a) throws DbException;
 
 	/**
+	 * Returns true if there are any messages to send to the given contact
+	 * over a transport with the given maximum latency.
+	 * <p/>
+	 * Read-only.
+	 *
+	 * @param eager True if messages that are not yet due for retransmission
+	 * should be included
+	 */
+	boolean containsMessagesToSend(Transaction txn, ContactId c,
+			long maxLatency, boolean eager) throws DbException;
+
+	/**
 	 * Returns true if the database contains the given pending contact.
 	 * <p/>
 	 * Read-only.
 	 */
 	boolean containsPendingContact(Transaction txn, PendingContactId p)
+			throws DbException;
+
+	/**
+	 * Returns true if the database contains keys for communicating with the
+	 * given contact over the given transport. Handshake mode and rotation mode
+	 * keys are included, whether activated or not.
+	 * <p/>
+	 * Read-only.
+	 */
+	boolean containsTransportKeys(Transaction txn, ContactId c, TransportId t)
 			throws DbException;
 
 	/**
@@ -171,14 +207,15 @@ public interface DatabaseComponent extends TransactionManager {
 			throws DbException;
 
 	/**
-	 * Returns a batch of messages for the given contact, with a total length
-	 * less than or equal to the given length, for transmission over a
-	 * transport with the given maximum latency. Returns null if there are no
-	 * sendable messages that fit in the given length.
+	 * Returns a batch of messages for the given contact, for transmission over
+	 * a transport with the given maximum latency. The total length of the
+	 * messages, including record headers, will be no more than the given
+	 * capacity. Returns null if there are no sendable messages that would fit
+	 * in the given capacity.
 	 */
 	@Nullable
 	Collection<Message> generateBatch(Transaction txn, ContactId c,
-			int maxLength, int maxLatency) throws DbException;
+			long capacity, long maxLatency) throws DbException;
 
 	/**
 	 * Returns an offer for the given contact for transmission over a
@@ -187,7 +224,7 @@ public interface DatabaseComponent extends TransactionManager {
 	 */
 	@Nullable
 	Offer generateOffer(Transaction txn, ContactId c, int maxMessages,
-			int maxLatency) throws DbException;
+			long maxLatency) throws DbException;
 
 	/**
 	 * Returns a request for the given contact, or null if there are no
@@ -198,15 +235,16 @@ public interface DatabaseComponent extends TransactionManager {
 			throws DbException;
 
 	/**
-	 * Returns a batch of messages for the given contact, with a total length
-	 * less than or equal to the given length, for transmission over a
-	 * transport with the given maximum latency. Only messages that have been
-	 * requested by the contact are returned. Returns null if there are no
-	 * sendable messages that fit in the given length.
+	 * Returns a batch of messages for the given contact, for transmission over
+	 * a transport with the given maximum latency. Only messages that have been
+	 * requested by the contact are returned. The total length of the messages,
+	 * including record headers, will be no more than the given capacity.
+	 * Returns null if there are no sendable messages that have been requested
+	 * by the contact and would fit in the given capacity.
 	 */
 	@Nullable
 	Collection<Message> generateRequestedBatch(Transaction txn, ContactId c,
-			int maxLength, int maxLatency) throws DbException;
+			long capacity, long maxLatency) throws DbException;
 
 	/**
 	 * Returns the contact with the given ID.
@@ -244,6 +282,13 @@ public interface DatabaseComponent extends TransactionManager {
 	 * Read-only.
 	 */
 	Group getGroup(Transaction txn, GroupId g) throws DbException;
+
+	/**
+	 * Returns the ID of the group containing the given message.
+	 * <p/>
+	 * Read-only.
+	 */
+	GroupId getGroupId(Transaction txn, MessageId m) throws DbException;
 
 	/**
 	 * Returns the metadata for the given group.
@@ -309,6 +354,30 @@ public interface DatabaseComponent extends TransactionManager {
 	 */
 	Collection<MessageId> getMessageIds(Transaction txn, GroupId g,
 			Metadata query) throws DbException;
+
+	/**
+	 * Returns the IDs of all messages received from the given contact that
+	 * need to be acknowledged.
+	 * <p/>
+	 * Read-only.
+	 */
+	Collection<MessageId> getMessagesToAck(Transaction txn, ContactId c)
+			throws DbException;
+
+	/**
+	 * Returns the IDs of some messages that are eligible to be sent to the
+	 * given contact over a transport with the given maximum latency. The total
+	 * length of the messages including record headers will be no more than the
+	 * given capacity.
+	 * <p/>
+	 * Unlike {@link #getUnackedMessagesToSend(Transaction, ContactId)} this
+	 * method does not return messages that have already been sent unless they
+	 * are due for retransmission.
+	 * <p/>
+	 * Read-only.
+	 */
+	Collection<MessageId> getMessagesToSend(Transaction txn, ContactId c,
+			long capacity, long maxLatency) throws DbException;
 
 	/**
 	 * Returns the IDs of any messages that need to be validated.
@@ -427,6 +496,52 @@ public interface DatabaseComponent extends TransactionManager {
 			throws DbException;
 
 	/**
+	 * Returns the message with the given ID for transmission to the given
+	 * contact over a transport with the given maximum latency. Returns null
+	 * if the message is no longer visible to the contact.
+	 * <p/>
+	 * Read-only if {@code markAsSent} is false.
+	 *
+	 * @param markAsSent True if the message should be marked as sent.
+	 * If false it can be marked as sent by calling
+	 * {@link #setMessagesSent(Transaction, ContactId, Collection, long)}.
+	 */
+	@Nullable
+	Message getMessageToSend(Transaction txn, ContactId c, MessageId m,
+			long maxLatency, boolean markAsSent) throws DbException;
+
+	/**
+	 * Returns the IDs of all messages that are eligible to be sent to the
+	 * given contact.
+	 * <p>
+	 * Unlike {@link #getMessagesToSend(Transaction, ContactId, long, long)}
+	 * this method may return messages that have already been sent and are
+	 * not yet due for retransmission.
+	 * <p/>
+	 * Read-only.
+	 */
+	Collection<MessageId> getUnackedMessagesToSend(Transaction txn,
+			ContactId c) throws DbException;
+
+	/**
+	 * Resets the transmission count, expiry time and max latency of all messages
+	 * that are eligible to be sent to the given contact. This includes messages
+	 * that have already been sent and are not yet due for retransmission.
+	 */
+	void resetUnackedMessagesToSend(Transaction txn, ContactId c)
+			throws DbException;
+
+	/**
+	 * Returns the total length, including headers, of all messages that are
+	 * eligible to be sent to the given contact. This may include messages
+	 * that have already been sent and are not yet due for retransmission.
+	 * <p/>
+	 * Read-only.
+	 */
+	long getUnackedMessageBytesToSend(Transaction txn, ContactId c)
+			throws DbException;
+
+	/**
 	 * Returns the next time (in milliseconds since the Unix epoch) when a
 	 * message is due to be deleted, or {@link #NO_CLEANUP_DEADLINE}
 	 * if no messages are scheduled to be deleted.
@@ -435,15 +550,18 @@ public interface DatabaseComponent extends TransactionManager {
 	 */
 	long getNextCleanupDeadline(Transaction txn) throws DbException;
 
-	/*
+	/**
 	 * Returns the next time (in milliseconds since the Unix epoch) when a
-	 * message is due to be sent to the given contact. The returned value may
-	 * be zero if a message is due to be sent immediately, or Long.MAX_VALUE if
-	 * no messages are scheduled to be sent.
+	 * message is due to be sent to the given contact over a transport with
+	 * the given latency.
+	 * <p>
+	 * The returned value may be zero if a message is due to be sent
+	 * immediately, or Long.MAX_VALUE if no messages are scheduled to be sent.
 	 * <p/>
 	 * Read-only.
 	 */
-	long getNextSendTime(Transaction txn, ContactId c) throws DbException;
+	long getNextSendTime(Transaction txn, ContactId c, long maxLatency)
+			throws DbException;
 
 	/**
 	 * Returns the pending contact with the given ID.
@@ -482,6 +600,16 @@ public interface DatabaseComponent extends TransactionManager {
 	 */
 	Collection<TransportKeySet> getTransportKeys(Transaction txn, TransportId t)
 			throws DbException;
+
+	/**
+	 * Returns the contact IDs and transport IDs for which the DB contains
+	 * at least one set of transport keys. Handshake mode and rotation mode
+	 * keys are included, whether activated or not.
+	 * <p/>
+	 * Read-only.
+	 */
+	Map<ContactId, Collection<TransportId>> getTransportsWithKeys(
+			Transaction txn) throws DbException;
 
 	/**
 	 * Increments the outgoing stream counter for the given transport keys.
@@ -576,6 +704,13 @@ public interface DatabaseComponent extends TransactionManager {
 			throws DbException;
 
 	/**
+	 * Records an ack for the given messages as having been sent to the given
+	 * contact.
+	 */
+	void setAckSent(Transaction txn, ContactId c, Collection<MessageId> acked)
+			throws DbException;
+
+	/**
 	 * Sets the cleanup timer duration for the given message. This does not
 	 * start the message's cleanup timer.
 	 */
@@ -620,6 +755,13 @@ public interface DatabaseComponent extends TransactionManager {
 	 */
 	void setMessageState(Transaction txn, MessageId m, MessageState state)
 			throws DbException;
+
+	/**
+	 * Records the given messages as having been sent to the given contact
+	 * over a transport with the given maximum latency.
+	 */
+	void setMessagesSent(Transaction txn, ContactId c,
+			Collection<MessageId> sent, long maxLatency) throws DbException;
 
 	/**
 	 * Adds dependencies for a message

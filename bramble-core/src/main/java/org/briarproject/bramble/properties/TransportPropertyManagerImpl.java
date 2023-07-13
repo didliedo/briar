@@ -14,7 +14,6 @@ import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Metadata;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager.OpenDatabaseHook;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
 import org.briarproject.bramble.api.properties.TransportPropertyManager;
@@ -29,6 +28,7 @@ import org.briarproject.bramble.api.sync.validation.IncomingMessageHook;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.versioning.ClientVersioningManager;
 import org.briarproject.bramble.api.versioning.ClientVersioningManager.ClientVersioningHook;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -44,6 +44,7 @@ import static org.briarproject.bramble.api.properties.TransportPropertyConstants
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MSG_KEY_TRANSPORT_ID;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.MSG_KEY_VERSION;
 import static org.briarproject.bramble.api.properties.TransportPropertyConstants.REFLECTED_PROPERTY_PREFIX;
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_DO_NOT_SHARE;
 import static org.briarproject.bramble.util.StringUtils.isNullOrEmpty;
 
 @Immutable
@@ -115,8 +116,8 @@ class TransportPropertyManagerImpl implements TransportPropertyManager,
 	}
 
 	@Override
-	public boolean incomingMessage(Transaction txn, Message m, Metadata meta)
-			throws DbException, InvalidMessageException {
+	public DeliveryAction incomingMessage(Transaction txn, Message m,
+			Metadata meta) throws DbException, InvalidMessageException {
 		try {
 			// Find the latest update for this transport, if any
 			BdfDictionary d = metadataParser.parse(meta);
@@ -131,14 +132,14 @@ class TransportPropertyManagerImpl implements TransportPropertyManager,
 					// We've already received a newer update - delete this one
 					db.deleteMessage(txn, m.getId());
 					db.deleteMessageMetadata(txn, m.getId());
-					return false;
+					return ACCEPT_DO_NOT_SHARE;
 				}
 			}
 			txn.attach(new RemoteTransportPropertiesUpdatedEvent(t));
 		} catch (FormatException e) {
 			throw new InvalidMessageException(e);
 		}
-		return false;
+		return ACCEPT_DO_NOT_SHARE;
 	}
 
 	@Override
@@ -200,7 +201,7 @@ class TransportPropertyManagerImpl implements TransportPropertyManager,
 			// Retrieve and parse the latest local properties
 			for (Entry<TransportId, LatestUpdate> e : latest.entrySet()) {
 				BdfList message = clientHelper.getMessageAsList(txn,
-						e.getValue().messageId);
+						e.getValue().messageId, false);
 				local.put(e.getKey(), parseProperties(message));
 			}
 			return local;
@@ -221,7 +222,7 @@ class TransportPropertyManagerImpl implements TransportPropertyManager,
 				if (latest != null) {
 					// Retrieve and parse the latest local properties
 					BdfList message = clientHelper.getMessageAsList(txn,
-							latest.messageId);
+							latest.messageId, false);
 					p = parseProperties(message);
 				}
 				return p == null ? new TransportProperties() : p;
@@ -251,7 +252,7 @@ class TransportPropertyManagerImpl implements TransportPropertyManager,
 				local = new TransportProperties();
 			} else {
 				BdfList message = clientHelper.getMessageAsList(txn,
-						latest.messageId);
+						latest.messageId, false);
 				local = parseProperties(message);
 			}
 			storeLocalProperties(txn, c, t, local);
@@ -271,8 +272,8 @@ class TransportPropertyManagerImpl implements TransportPropertyManager,
 				remote = new TransportProperties();
 			} else {
 				// Retrieve and parse the latest remote properties
-				BdfList message =
-						clientHelper.getMessageAsList(txn, latest.messageId);
+				BdfList message = clientHelper.getMessageAsList(txn,
+						latest.messageId, false);
 				remote = parseProperties(message);
 			}
 			// Merge in any discovered properties
@@ -316,7 +317,7 @@ class TransportPropertyManagerImpl implements TransportPropertyManager,
 					changed = true;
 				} else {
 					BdfList message = clientHelper.getMessageAsList(txn,
-							latest.messageId);
+							latest.messageId, false);
 					TransportProperties old = parseProperties(message);
 					merged = new TransportProperties(old);
 					for (Entry<String, String> e : p.entrySet()) {

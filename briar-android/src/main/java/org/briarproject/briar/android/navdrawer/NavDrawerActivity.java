@@ -20,8 +20,6 @@ import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.navigation.NavigationView.OnNavigationItemSelectedListener;
 
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.plugin.BluetoothConstants;
 import org.briarproject.bramble.api.plugin.LanTcpConstants;
 import org.briarproject.bramble.api.plugin.Plugin.State;
@@ -29,6 +27,7 @@ import org.briarproject.bramble.api.plugin.TorConstants;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.briar.R;
 import org.briarproject.briar.android.BriarApplication;
+import org.briarproject.briar.android.StartupFailureActivity;
 import org.briarproject.briar.android.activity.ActivityComponent;
 import org.briarproject.briar.android.activity.BriarActivity;
 import org.briarproject.briar.android.blog.FeedFragment;
@@ -39,6 +38,8 @@ import org.briarproject.briar.android.fragment.BaseFragment.BaseFragmentListener
 import org.briarproject.briar.android.logout.SignOutFragment;
 import org.briarproject.briar.android.privategroup.list.GroupListFragment;
 import org.briarproject.briar.android.settings.SettingsActivity;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -73,6 +74,7 @@ import static org.briarproject.bramble.api.plugin.Plugin.State.ACTIVE;
 import static org.briarproject.bramble.api.plugin.Plugin.State.ENABLING;
 import static org.briarproject.bramble.api.plugin.Plugin.State.STARTING_STOPPING;
 import static org.briarproject.briar.android.BriarService.EXTRA_STARTUP_FAILED;
+import static org.briarproject.briar.android.BriarService.EXTRA_START_RESULT;
 import static org.briarproject.briar.android.TestingConstants.IS_DEBUG_BUILD;
 import static org.briarproject.briar.android.activity.RequestCodes.REQUEST_PASSWORD;
 import static org.briarproject.briar.android.navdrawer.IntentRouter.handleExternalIntent;
@@ -140,7 +142,7 @@ public class NavDrawerActivity extends BriarActivity implements
 					.observe(this, this::showExpiryWarning);
 		}
 		navDrawerViewModel.shouldAskForDozeWhitelisting().observe(this, ask -> {
-			if (ask) showDozeDialog(getString(R.string.setup_doze_intro));
+			if (ask) showDozeDialog(R.string.dnkm_doze_intro);
 		});
 
 		Toolbar toolbar = setUpCustomToolbar(false);
@@ -205,7 +207,9 @@ public class NavDrawerActivity extends BriarActivity implements
 	public void onStart() {
 		super.onStart();
 		lockManager.checkIfLockable();
-		if (IS_DEBUG_BUILD) navDrawerViewModel.checkExpiryWarning();
+		if (IS_DEBUG_BUILD) {
+			navDrawerViewModel.checkExpiryWarning();
+		}
 	}
 
 	@Override
@@ -250,6 +254,11 @@ public class NavDrawerActivity extends BriarActivity implements
 
 	private void exitIfStartupFailed(Intent intent) {
 		if (intent.getBooleanExtra(EXTRA_STARTUP_FAILED, false)) {
+			// Launch StartupFailureActivity in its own process, then exit
+			Intent i = new Intent(this, StartupFailureActivity.class);
+			i.putExtra(EXTRA_START_RESULT,
+					intent.getSerializableExtra(EXTRA_START_RESULT));
+			startActivity(i);
 			finish();
 			LOG.info("Exiting");
 			System.exit(0);
@@ -409,7 +418,7 @@ public class NavDrawerActivity extends BriarActivity implements
 			}
 
 			@Override
-			public View getView(int position, View convertView,
+			public View getView(int position, @Nullable View convertView,
 					ViewGroup parent) {
 				View view;
 				if (convertView != null) {

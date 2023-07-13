@@ -16,9 +16,6 @@ import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.event.Event;
 import org.briarproject.bramble.api.event.EventListener;
 import org.briarproject.bramble.api.identity.Author;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.properties.TransportPropertyManager;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.Message;
@@ -36,6 +33,9 @@ import org.briarproject.briar.api.introduction.event.IntroductionAbortedEvent;
 import org.briarproject.briar.api.introduction.event.IntroductionRequestReceivedEvent;
 import org.briarproject.briar.api.introduction.event.IntroductionResponseReceivedEvent;
 import org.briarproject.briar.test.BriarIntegrationTest;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -986,6 +986,10 @@ public class IntroductionIntegrationTest
 	@Test
 	public void testIntroduceesRemovedCleanup() throws Exception {
 		addListeners(true, true);
+		// The second introducee shouldn't respond to the introduction
+		// otherwise there would be a race between the response to the REQUEST
+		// and the delivery of the ABORT
+		listener2.answerRequests = false;
 
 		// make introduction
 		introductionManager0
@@ -1047,11 +1051,13 @@ public class IntroductionIntegrationTest
 				true);
 		contact0From1 = contactManager1.getContact(contactId0From1);
 
-		// Sync initial client versioning updates and transport properties
+		// Sync initial client versioning updates, mailbox updates, and
+		// transport properties
 		sync0To1(1, true);
 		sync1To0(1, true);
-		sync0To1(2, true);
-		sync1To0(1, true);
+		sync0To1(3, true);
+		sync1To0(2, true);
+		ack0To1(2);
 
 		// a new introduction should be possible
 		assertTrue(introductionManager0

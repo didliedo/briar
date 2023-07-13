@@ -2,7 +2,7 @@ package org.briarproject.bramble.api.record;
 
 import org.briarproject.bramble.api.FormatException;
 import org.briarproject.bramble.api.Predicate;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.EOFException;
 import java.io.IOException;
@@ -32,8 +32,15 @@ public interface RecordReader {
 	 * 'accept' or 'ignore' predicates
 	 */
 	@Nullable
-	Record readRecord(Predicate<Record> accept, Predicate<Record> ignore)
+	Record readRecord(RecordPredicate accept, RecordPredicate ignore)
 			throws IOException;
 
 	void close() throws IOException;
+
+	/**
+	 * Interface that reifies the generic interface {@code Predicate<Record>}
+	 * for easier testing.
+	 */
+	interface RecordPredicate extends Predicate<Record> {
+	}
 }

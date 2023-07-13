@@ -5,11 +5,11 @@ import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.identity.Author;
 import org.briarproject.bramble.api.identity.AuthorId;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.ClientId;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.briar.api.client.MessageTracker.GroupCount;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.Collection;
 import java.util.List;
@@ -55,7 +55,17 @@ public interface PrivateGroupManager {
 	/**
 	 * Removes a dissolved private group.
 	 */
+	void removePrivateGroup(Transaction txn, GroupId g) throws DbException;
+
+	/**
+	 * Removes a dissolved private group.
+	 */
 	void removePrivateGroup(GroupId g) throws DbException;
+
+	/**
+	 * Returns the ID of the user's previous message sent to the group
+	 */
+	MessageId getPreviousMsgId(Transaction txn, GroupId g) throws DbException;
 
 	/**
 	 * Returns the ID of the user's previous message sent to the group
@@ -110,6 +120,12 @@ public interface PrivateGroupManager {
 			throws DbException;
 
 	/**
+	 * Returns true if the given private group was created by us.
+	 */
+	boolean isOurPrivateGroup(Transaction txn, PrivateGroup g)
+			throws DbException;
+
+	/**
 	 * Returns the text of the private group message with the given ID.
 	 */
 	String getMessageText(MessageId m) throws DbException;
@@ -155,6 +171,12 @@ public interface PrivateGroupManager {
 	 * Returns the group count for the given private group.
 	 */
 	GroupCount getGroupCount(GroupId g) throws DbException;
+
+	/**
+	 * Marks a message as read or unread and updates the group count.
+	 */
+	void setReadFlag(Transaction txn, GroupId g, MessageId m, boolean read)
+			throws DbException;
 
 	/**
 	 * Marks a message as read or unread and updates the group count.

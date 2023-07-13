@@ -1,11 +1,10 @@
 package org.briarproject.briar.android.contact;
 
 import org.briarproject.bramble.api.contact.Contact;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.briar.api.attachment.AttachmentHeader;
 import org.briarproject.briar.api.client.MessageTracker.GroupCount;
-import org.briarproject.briar.api.conversation.ConversationMessageHeader;
 import org.briarproject.briar.api.identity.AuthorInfo;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.Immutable;
@@ -40,10 +39,10 @@ public class ContactListItem extends ContactItem
 				item.unread, item.timestamp);
 	}
 
-	ContactListItem(ContactListItem item, ConversationMessageHeader h) {
+	ContactListItem(ContactListItem item, long timestamp, boolean read) {
 		this(item.getContact(), item.getAuthorInfo(), item.isConnected(), false,
-				h.isRead() ? item.unread : item.unread + 1,
-				Math.max(h.getTimestamp(), item.timestamp));
+				read ? item.unread : item.unread + 1,
+				Math.max(timestamp, item.timestamp));
 	}
 
 	/**

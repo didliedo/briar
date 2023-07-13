@@ -6,10 +6,8 @@
   <string name="setup_next">Pasuesi</string>
   <string name="setup_password_intro">Zgjidhni një Fjalëkalim</string>
   <string name="setup_password_explanation">Llogaria juaj Briar depozitohet e fshehtëzuar në pajisjen tuaj, jo në re. Nëse harroni fjalëkalimin tuaj apo e çinstaloni Briar-in, nuk ka ndonjë mënyrë për të ringjallur llogarinë tuaj.\n\nZgjidhni një fjalëkalim të gjatë, që është i vështirë për t\’u marrë me mend, f.v., katër fjalë kuturu, ose dhjetë shkronja, numra dhe shenja kuturu.</string>
-  <string name="setup_doze_title">Lidhje Në Prapaskenë</string>
-  <string name="setup_doze_intro">Për të marrë mesazhe, Briar-i lypset të qëndrojë i lidhur në prapaskenë.</string>
-  <string name="setup_doze_explanation">Për të marrë mesazhe, Briar-i lypset të mbetet i lidhur në prapaskenë. Ju lutemi, çaktivizoni optimizime baterie, që kështu Briar-i të mund të qëndrojë i lidhur.</string>
-  <string name="setup_doze_button">Lejo Lidhje</string>
+  <string name="dnkm_doze_intro">Për të marrë mesazhe, Briar-i lypset të qëndrojë i lidhur në prapaskenë.</string>
+  <string name="dnkm_doze_explanation">Për të marrë mesazhe, Briar-i lypset të mbetet i lidhur në prapaskenë. Ju lutemi, çaktivizoni optimizime baterie, që kështu Briar-i të mund të qëndrojë i lidhur.</string>
   <string name="choose_nickname">Zgjidhni nofkën tuaj</string>
   <string name="choose_password">Zgjidhni fjalëkalimin tuaj</string>
   <string name="confirm_password">Ripohoni fjalëkalimin tuaj</string>
@@ -19,19 +17,19 @@
   <string name="create_account_button">Krijoje Llogarinë</string>
   <string name="more_info">Më Tepër të Dhëna</string>
   <string name="don_t_ask_again">Mos pyet sërish</string>
-  <string name="setup_huawei_text">Ju lutemi, prekni butoni më poshtë dhe sigurohuni që Briar-i të jetë i mbrojtur, te skena \"Aplikacione të Mbrojtur\".</string>
-  <string name="setup_huawei_button">Mbroje Briar-in</string>
-  <string name="setup_huawei_help">Nëse Briar-i s\’është shtuar te lista e aplikacioneve të mbrojtur, s\’do të jetë në gjendje të xhirojë në prapaskenë.</string>
-  <string name="setup_huawei_app_launch_text">Ju lutemi, prekni butonin më poshtë, hapni skenën “Nisje aplikacioni” dhe sigurohuni se për Briar-in është zgjedhur “Administrojeni dorazi”.</string>
-  <string name="setup_huawei_app_launch_button">Hapni Rregullime Baterie</string>
-  <string name="setup_huawei_app_launch_help">Nëse për Briar-in s’është zgjedhur “Administroje Dorazi” te skena “Nisje Aplikacioni”, s’do të jetë në gjendje të xhirojë në prapaskenë.</string>
-  <string name="setup_xiaomi_text">Për të xhiruar në prapaskenë, Briar-i lyp të jetë i kyçur te lista e aplikacioneve të përdorur së fundi.</string>
-  <string name="setup_xiaomi_button">Mbroje Briar-in</string>
-  <string name="setup_xiaomi_help">Nëse Briar-i s’është i kyçur te lista e aplikacioneve të përdorur së fundi, s’do të jetë në gjendje të xhirojë në prapaskenë.</string>
-  <string name="setup_xiaomi_dialog_body_old">1. Hapni listën e aplikacioneve përdorur së fundi (e quajtur edhe këmbyes aplikacionesh)\n\n2. Fërkojeni për poshtë te figura për Briar-in, që të shfaqet ikona e drynit\n\n3. Nëse dryni s’është o kyçur, prekeni që të kyçet</string>
-  <string name="setup_xiaomi_dialog_body_new">1. Hapni listën e aplikacioneve përdorur së fundi (e quajtur edhe 
-këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-it, deri sa të shfaqet butoni i drynit\n\n3. Nëse dryni s’është o kyçur, prekeni që të kyçet</string>
-  <string name="warning_dozed">%s s\’qe në gjendje të xhirojë në prapaskenë</string>
+  <string name="dnkm_huawei_protected_text">Ju lutemi, prekni butoni më poshtë dhe sigurohuni që Briar-i të jetë i mbrojtur, te skena \"Aplikacione të Mbrojtur\".</string>
+  <string name="dnkm_huawei_protected_button">Mbroje Briar-in</string>
+  <string name="dnkm_huawei_protected_help">Nëse Briar-i s\’është shtuar te lista e aplikacioneve të mbrojtur, s\’do të jetë në gjendje të xhirojë në prapaskenë.</string>
+  <string name="dnkm_huawei_app_launch_text">Ju lutemi, prekni butonin më poshtë, hapni skenën “Nisje aplikacioni” dhe sigurohuni se për Briar-in është zgjedhur “Administrojeni dorazi”.</string>
+  <string name="dnkm_huawei_app_launch_help">Nëse për Briar-in s’është zgjedhur “Administroje Dorazi” te skena “Nisje Aplikacioni”, s’do të jetë në gjendje të xhirojë në prapaskenë.</string>
+  <string name="dnkm_xiaomi_text">Për të xhiruar në prapaskenë, Briar-i lyp të jetë i kyçur te lista e aplikacioneve të përdorur së fundi.</string>
+  <string name="dnkm_xiaomi_button">Mbroje Briar-in</string>
+  <string name="dnkm_xiaomi_help">Nëse Briar-i s’është i kyçur te lista e aplikacioneve të përdorur së fundi, s’do të jetë në gjendje të xhirojë në prapaskenë.</string>
+  <string name="dnkm_xiaomi_dialog_body_old">1. Hapni listën e aplikacioneve përdorur së fundi (e quajtur edhe këmbyes aplikacionesh)\n\n2. Fërkojeni për poshtë te figura për Briar-in, që të shfaqet ikona e drynit\n\n3. Nëse dryni s’është o kyçur, prekeni që të kyçet</string>
+  <string name="dnkm_xiaomi_dialog_body_new">1. Hapni listën e aplikacioneve të përdorur së fundi (e quajtur edhe këmbyes aplikacionesh)\n\n2. Nëse Briar-i ka një figurë dry të vogël në krah të emrit të vet, s’keni nevojë të bëni gjë\n\n3. Nëse s’ka dry, shtypni dhe mbajeni të shtypur mbi figurën e Briar-it derisa të shfaqet butoni dry, mandej prekeni</string>
+  <string name="dnkm_xiaomi_lock_apps_text">Ju lutemi, prekni butonin më poshtë që të hapen rregullimet e sigurisë. Prekni “Përforcim shpejtësie”, mandej prekni “Kyçje aplikacionesh” dhe sigurohuni se për Briar-in është zgjedhur “I kyçur”.</string>
+  <string name="dnkm_xiaomi_lock_apps_help">Nëse për Briar-in s’është zgjedhur “I kyçur” te skena “Kyçje aplikacionesh”, s’do të jetë në gjendje të xhirojë në prapaskenë.</string>
+  <string name="dnkm_warning_dozed_1">Briar-i s’qe në gjendje të xhirojë në prapaskenë</string>
   <!--Login-->
   <string name="enter_password">Fjalëkalim</string>
   <string name="try_again">Fjalëkalim i gabuar, riprovoni</string>
@@ -41,13 +39,13 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="forgotten_password">Kam harruar fjalëkalimin tim</string>
   <string name="dialog_title_lost_password">U humb Fjalëkalimi</string>
   <string name="dialog_message_lost_password">Llogaria juaj Briar depozitohet e fshehtëzuar në pajisjen tuaj, jo në re, ndaj s\’mund ta ricaktojmë fjalëkalimin tuaj. Do të donit ta fshini llogarinë tuaj dhe t\’ia filloni nga e para?\n\nKujdes: Identitetet, kontaktet dhe mesazhet tuaja do të humbin përgjithnjë.</string>
-  <string name="startup_failed_notification_title">Briar-i s\’u nis dot</string>
-  <string name="startup_failed_notification_text">Prekeni për më tepër të dhëna.</string>
   <string name="startup_failed_activity_title">Dështim Nisjeje i Briar-it</string>
-  <string name="startup_failed_db_error">Për ndonjë arsye, baza e të dhënave të Briar-it është e dëmtuar sa nuk ndreqet dot. Llogaria juaj, të dhënat tuaja dhe krejt kontaktet tuaja humbën. Mjerisht, duhet të riinstaloni Briar-in dhe të rregulloni një llogari të re, duke zgjedhur \'Kam harruar fjalëkalimin tim\' te hapi për fjalëkalimin.</string>
-  <string name="startup_failed_data_too_old_error">Llogaria juaj qe krijuar me një version të vjetër të këtij aplikacioni dhe s\’mund të hapet me këtë version. Ose duhet të riinstaloni versionin e vjetër, ose të fshini llogarinë tuaj të vjetër duke zgjedhur \'Kam harruar fjalëkalimin tim\' te hapi për fjalëkalimin.</string>
-  <string name="startup_failed_data_too_new_error">Ky version i aplikacionit është shumë i vjetër. Ju lutemi, përmirësojeni me versionin më të ri dhe riprovoni.</string>
-  <string name="startup_failed_service_error">Briar-i s\’arriti të nisë një shtojcë të domosdoshme. Zakonisht këtë problem e zgjidh riinstalimi i Briar-it. Por, ju lutemi, kini parasysh se me të do të humbni llogarinë tuaj dhe krejt të dhënat e lidhura me të, ngaqë Briar nuk përdor shërbyes qendrorë për të depozituar në ta të dhënat tuaja.</string>
+  <string name="startup_failed_clock_error">Briar-i s’qe në gjendje të nisej, ngaqë sahati i pajisjes tuaj është gabim.\n\nJu lutemi, vëreni sahatin e pajisjes tuaj në kohën e saktë dhe riprovoni.</string>
+  <string name="startup_failed_db_error">Briar-i s’qe në gjendje të hapte bazën e të dhënave që përmban llogarinë tuaj, kontaktet tuaja dhe mesazhet tuaja.\n\nJu lutemi, përmirësojeni me versionin më të ri të aplikacionit dhe riprovoni, ose ujdisni një llogari të re duke zgjedhur “Kam harruar fjalëkalimin tim”, kur ju kërkohet fjalëkalimi.</string>
+  <string name="startup_failed_data_too_old_error">Llogaria juaj qe krijuar me një version të vjetër të këtij aplikacioni dhe s’mund të hapet me këtë version.\n\nDuhet ose të riinstaloni versionin e vjetër, ose të ujdisni llogari të re duke zgjedhur “Kam harruar fjalëkalimin tim”, kur ju kërkohet fjalëkalimi.</string>
+  <string name="startup_failed_data_too_new_error">Llogaria juaj qe krijuar me një version më të ri të këtij aplikacioni 
+dhe s’mund të hapet me këtë version.\n\nJu lutemi, përmirësojeni me versionin më të ri dhe riprovoni.</string>
+  <string name="startup_failed_service_error">Briar-i nuk arriti të nisë një përbërës të domosdoshëm.\n\nJu lutemi, përmirësojeni me versionin më të ri të aplikacionit dhe riprovoni.</string>
   <plurals name="expiry_warning">
     <item quantity="one">Ky është një version beta i Briar-it. Llogaria juaj do të skadojë për %d ditë dhe s\’mund të rinovohet.</item>
     <item quantity="other">Ky është një version beta i Briar-it. Llogaria juaj do të skadojë për %d ditë dhe s\’mund të rinovohet.</item>
@@ -56,6 +54,9 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="download_briar">Që të vazhdoni të përdorni Briar-in, ju lutemi shkarkoni versionin më të ri.</string>
   <string name="create_new_account">Do t’ju duhet të krijoni një llogari të re, por mund të përdorni të njëjtën nofkë.</string>
   <string name="download_briar_button">Shkarkoni Hedhjen Më të Re Në Qarkullim</string>
+  <string name="old_android_expiry_date_reached">Briar-i nuk funksionon më në Android 4.\nJu lutemi, instalojeni Briar-in në një pajisje më të re.</string>
+  <string name="old_android_delete_account">Mund të prekni butonin më poshtë që të fshini llogarinë tuaj prej kësaj pajisjeje.</string>
+  <string name="delete_account_button">Fshi Llogarinë</string>
   <string name="startup_open_database">Po shfshehtëzohet Baza e të Dhënave…</string>
   <string name="startup_migrate_database">Po përditësohet Baza e të dhënave…</string>
   <string name="startup_compact_database">Po kompaktësohet Baza e të Dhënave…</string>
@@ -140,6 +141,7 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="open">Hape</string>
   <string name="change">Ndryshoje</string>
   <string name="start">Nise</string>
+  <string name="finish">Përfundoje</string>
   <string name="no_data">S\’ka të dhëna</string>
   <string name="ellipsis">…</string>
   <string name="text_too_long">Teksti i dhënë është shumë i gjatë</string>
@@ -148,7 +150,9 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="help">Ndihmë</string>
   <string name="sorry">Na ndjeni</string>
   <string name="error_start_activity">Jo i passhëm në sistemin tuaj</string>
-  <string name="status_heading">Gjëndja</string>
+  <string name="status_heading">Gjendje:</string>
+  <string name="error">Gabim</string>
+  <string name="info">Informacion</string>
   <!--Contacts and Private Conversations-->
   <string name="no_contacts">S’ka kontakte për shfaqje</string>
   <string name="no_contacts_action">Prekni ikonën + që të shtoni një kontakt</string>
@@ -165,15 +169,6 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="set_contact_alias">Ndryshoni emër kontakti</string>
   <string name="set_contact_alias_hint">Emër kontakti</string>
   <string name="menu_item_disappearing_messages">Mesazhe që treten</string>
-  <string name="menu_item_connect_via_bluetooth">Lidhu përmes Bluetooth-i</string>
-  <string name="dialog_title_connect_via_bluetooth">Lidhu përmes Bluetooth-i</string>
-  <string name="dialog_message_connect_via_bluetooth">Është e nevojshme që kontakti juaj të jetë atypari, që kjo të funksionojë.\n\nJu dhe kontakti juaj duhet që të shtypin “Fillo” në të njëjtën kohë.</string>
-  <string name="toast_connect_via_bluetooth_already_discovering">Po provohet tashmë të lidhet përmes Bluetooth-i</string>
-  <string name="toast_connect_via_bluetooth_not_discoverable">S’mund të vazhdohet pa Bluetooth</string>
-  <string name="toast_connect_via_bluetooth_no_location_permission">S’mund të vazhdohet pa leje vendore</string>
-  <string name="toast_connect_via_bluetooth_start">Po lidhet me Bluetooth…</string>
-  <string name="toast_connect_via_bluetooth_success">U lidh me sukses përmes Bluetooth-i</string>
-  <string name="toast_connect_via_bluetooth_error">S’u lidh dot përmes Bluetooth-i</string>
   <!--The first placeholder will show a duration like "7 days". The second placeholder at the end will add "Tap to learn more."-->
   <string name="auto_delete_msg_you_enabled">Mesazhet tuaja do të treten pas %1$s. %2$s</string>
   <!--The placeholder at the end will add "Tap to learn more."-->
@@ -225,8 +220,10 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="dialog_title_image_support">Tani mund t\’i dërgoni figura këtij kontakti</string>
   <string name="dialog_message_image_support">Prekeni këtë ikonë që të bashkëngjitni figura.</string>
   <string name="messaging_too_many_attachments_toast">Do të dërgohen vetëm %d figurat e para</string>
+  <string name="menu_contact">Kontakt</string>
   <!--Adding Contacts-->
-  <string name="add_contact_title">Shtoni Kontakt Atypari  </string>
+  <string name="add_contact_title">Shtoni Kontakt Atypari</string>
+  <string name="add_contact_error_two_way">A skanuat, që të dy palët, kodet QR të njëri-tjetrit?</string>
   <string name="face_to_face">Duhet të takoheni me personin që doni ta shtoni si kontakt.\n\nKjo do të pengojë cilindo të hiqet si ju ose të lexojë në të ardhmen mesazhet tuaj.</string>
   <string name="continue_button">Vazhdo</string>
   <string name="try_again_button">Riprovoni</string>
@@ -234,17 +231,21 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="exchanging_contact_details">Po shkëmbehen hollësi kontaktesh\u2026</string>
   <string name="contact_added_toast">Kontakti u shtua: %s</string>
   <string name="contact_already_exists">Kontakti %s ekziston tashmë</string>
+  <string name="contact_already_exists_general">Kontakti ekziston tashmë</string>
   <string name="qr_code_invalid">Kodi QR është i pavlefshëm</string>
-  <string name="qr_code_too_old">Kodi QR që keni skanuar vjen prej një versioni të vjetër të %s-it.\n\nJu lutemi, kërkojini kontaktit tuaj ta përmirësojë me versionin më të ri dhe mandej riprovoni.</string>
-  <string name="qr_code_too_new">Kodi QR që keni skanuar vjen prej një versioni më të ri të %s-it.\n\nJu lutemi, përmirësojeni me versionin më të ri dhe mandej riprovoni.</string>
+  <string name="qr_code_too_old_1">Kodi QR që keni skanuar vjen prej një versioni të vjetër të Briar-it.\n\nJu lutemi, kërkojini kontaktit tuaj ta përmirësojë me versionin më të ri dhe mandej riprovoni.</string>
+  <string name="qr_code_too_new_1">Kodi QR që keni skanuar vjen prej një versioni më të ri të Briar-it.\n\nJu lutemi, përmirësojeni me versionin më të ri dhe mandej riprovoni.</string>
+  <string name="mailbox_qr_code_for_contact">Kodi QR që keni skanuar vjen prej Kutisë Postare të Briar-it.\n\nNëse doni një lidhje për te Kutia Postare, ju lutemi, zgjidhni Rregullime &gt; Kuti Postare, që nga menuja e Briar-it.</string>
+  <string name="qr_code_format_unknown">Kodi QR që keni skanuar s’është menduar për shtim të një kontakti Briar.\n\nJu lutemi, skanoni kodin QR të shfaqur te ekrani i kontaktit tuaj.</string>
   <string name="camera_error">Gabim kamere</string>
   <string name="connecting_to_device">Po lidhet me pajisjen\u2026</string>
   <string name="authenticating_with_device">Po bëhet mirëfilltësimi me pajisjen\u2026</string>
   <string name="connection_error_title">S’u lidh dot te kontakti juaj</string>
   <string name="connection_error_feedback">Nëse problemi vazhdon, ju lutemi, <a href="feedback">na njoftoni</a>, që të mund të përmirësojmë aplikacionin.</string>
+  <string name="info_both_must_scan">Duhet të skanoni, të dy palët, kodet QR të njëri-tjetrit</string>
   <!--Adding Contacts Remotely-->
   <string name="add_contact_remotely_title_case">Shtoni Kontakt në Largësi</string>
-  <string name="add_contact_nearby_title">Shtoni kontakt atypari  </string>
+  <string name="add_contact_nearby_title">Shtoni kontakt atypari</string>
   <string name="add_contact_remotely_title">Shtoni kontakt në largësi</string>
   <string name="contact_link_intro">Jepni këtu lidhjen prej kontaktit tuaj</string>
   <string name="contact_link_hint">Lidhje e kontaktit</string>
@@ -258,13 +259,13 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="nickname_intro">Jepini kontaktit tuaj një nofkë. Vetëm ju mund ta shihni.</string>
   <string name="your_link">Jepjani këtë lidhje kontaktit që doni të shtoni</string>
   <string name="link_clip_label">Lidhje Briar</string>
-  <string name="link_copied_toast">Lidhja i kopjua</string>
+  <string name="link_copied_toast">Lidhja u kopjua</string>
   <string name="adding_contact_error">Pati një gabim në shtimin e kontaktit.</string>
   <string name="pending_contact_requests_snackbar">Ka kërkesa kontakti pezull</string>
   <string name="pending_contact_requests">Kërkesa Kontakti Pezull</string>
   <string name="no_pending_contacts">S\’ka kontakte pezull</string>
   <string name="waiting_for_contact_to_come_online">Po pritet që kontakti të jetë në linjë…</string>
-  <string name="connecting">Duke u kyqur...</string>
+  <string name="connecting">Po lidhet…</string>
   <string name="adding_contact">Po shtohet kontakti…</string>
   <string name="adding_contact_failed">Shtimi i kontaktit dështoi</string>
   <string name="dialog_title_remove_pending_contact">Ripohoni Heqjen</string>
@@ -288,7 +289,7 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="duplicate_link_dialog_text_1">Keni tashmë një kontakt pezull me këtë lidhje: %s</string>
   <string name="duplicate_link_dialog_text_1_contact">Keni tashmë një kontakt me këtë lidhje: %s</string>
   <!--This is a question asking whether two nicknames refer to the same person-->
-  <string name="duplicate_link_dialog_text_2">A janë %s dhe %s i njëjti person?</string>
+  <string name="duplicate_link_dialog_text_2">Është %1$s dhe %2$s i njëjti person?</string>
   <!--This is a button for answering that two nicknames do indeed refer to the same person. This
 	string will be used in a dialog button, so if the translation of this string is longer than 20
 	characters, please use "Yes" instead, and use "No" for the "Different Person" button-->
@@ -297,11 +298,17 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
 	will be used in a dialog button, so if the translation of this string longer than 20 characters,
 	please use "No" instead, and use "Yes" for the "Same Person" button-->
   <string name="different_person_button">Person i Ndryshëm</string>
-  <string name="duplicate_link_dialog_text_3">%s dhe %s ju dërguan të njëjtën lidhje.\n\nNjëri prej tyre mund të jetë duke u rrekur të zbulojë se cilët janë kontaktet tuaj.\n\nMos u tregoni se morët të njëjtën lidhje nga dikush tjetër.</string>
+  <string name="duplicate_link_dialog_text_3">%1$s dhe %2$s ju dërguan të njëjtën lidhje.\n\nNjë prej tyre mund të jetë duke u rrekur të zbulojë cilët janë kontaktet tuaja.\n\nMos u thoni se morët të njëjtën lidhje nga dikush tjetër.</string>
   <string name="pending_contact_updated_toast">Kontakti pezull u përditësua</string>
+  <string name="info_both_must_enter_links">Duhet të shtoni, të dy palët, lidhjet e njëri tjetrit</string>
+  <!--Peer trust levels-->
+  <string name="peer_trust_level_unverified">Kontakt i paverifikuar</string>
+  <string name="peer_trust_level_verified">Kontakt i verifikuar</string>
+  <string name="peer_trust_level_ourselves">Unë</string>
+  <string name="peer_trust_level_stranger">I huaj</string>
   <!--Introductions-->
   <string name="introduction_onboarding_title">Prezantoni kontaktet tuaja</string>
-  <string name="introduction_onboarding_text">Kontaktet tuaja mund t\’ia prezantoni njëri-tjetrit, që kështu të mos u duhet të takohen realisht për të mundur të lidhen në Briar.</string>
+  <string name="introduction_onboarding_text">Prezantoni kontaktet tuaj me njëri-tjetrin, që të mund të lidhen me Briar.</string>
   <string name="introduction_menu_item">Bëje prezantimin</string>
   <string name="introduction_activity_title">Përzgjidhni Kontakt</string>
   <string name="introduction_not_possible">Keni filluar tashmë një prezantim me këto kontakte. Ju lutemi, lëreni të përfundojë së pari. Nëse ju ose kontaktet tuaja rrallë gjenden <em>online</em>, kjo mund të dojë ca kohë.</string>
@@ -321,6 +328,17 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="introduction_response_accepted_received">%1$s pranoi prezantimin te %2$s.</string>
   <string name="introduction_response_declined_received">%1$s hodhi poshtë prezantimin te %2$s.</string>
   <string name="introduction_response_declined_received_by_introducee">%1$s thotë se %2$s hodhi poshtë prezantimin.</string>
+  <!--Connect via Bluetooth-->
+  <string name="menu_item_connect_via_bluetooth">Lidhu përmes Bluetooth-i</string>
+  <string name="connect_via_bluetooth_title">Lidhu përmes Bluetooth-i</string>
+  <string name="connect_via_bluetooth_intro">Në rast se lidhjet me Bluetooth s’funksionojnë automatikisht, mund të përdorni këtë skenë që të bëni lidhjen dorazi.\n\nQë kjo të funksionojë, kontakti juaj duhet të jetë atypari.\n\nJu dhe kontakti juaj duhet të shtypni që të dy “Fillo” në të njëjtën kohë.</string>
+  <string name="connect_via_bluetooth_already_discovering">Po provohet tashmë të bëhet lidhje përmes Bluetooth-i. Ju lutemi, riprovoni pas pak.</string>
+  <string name="connect_via_bluetooth_no_location_permission">S’mund të vazhdohet pa leje vendore</string>
+  <string name="connect_via_bluetooth_no_bluetooth_permission">Pa leje pajisjesh atypari s’mund të vazhdohet </string>
+  <string name="connect_via_bluetooth_start">Po lidhet me Bluetooth…</string>
+  <string name="connect_via_bluetooth_success">U lidh me sukses përmes Bluetooth-i</string>
+  <string name="connect_via_bluetooth_error">S’u bë dot lidhja me Bluetooth.</string>
+  <string name="connect_via_bluetooth_error_not_supported">Bluetooth-i nuk mbulohet nga pajisja.</string>
   <!--Private Groups-->
   <string name="groups_list_empty">S’ka grupe për shfaqje</string>
   <string name="groups_list_empty_action">Prekni ikonën + që të krijoni një grup, ose kërkojuni kontakteve tuaj të ndajnë grupe me ju</string>
@@ -413,6 +431,10 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="forum_declined_toast">Ftesa u hodh poshtë</string>
   <string name="shared_by_format">Ndarë nga %s</string>
   <string name="forum_invitation_already_sharing">Ndarë tashmë</string>
+  <string name="forum_invitation_already_invited">Ftesë e dërguar tashmë</string>
+  <string name="forum_invitation_invite_received">Ftesë e marrë tashmë</string>
+  <string name="forum_invitation_not_supported">Nuk mbulohet prej këtij kontakti</string>
+  <string name="forum_invitation_error">Gabim. Kjo është një e metë dhe jo për fajin tuaj</string>
   <string name="forum_invitation_response_accepted_sent">Pranuat ftesën e forumit nga %s.</string>
   <string name="forum_invitation_response_declined_sent">Hodhët poshtë ftesën e forumit nga %s.</string>
   <string name="forum_invitation_response_declined_auto">Ftesa për në forum nga %s u hodh poshtë automatikisht.</string>
@@ -463,8 +485,9 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="blogs_rss_feeds_import">Importoni Prurje RSS</string>
   <string name="blogs_rss_feeds_import_button">Importo</string>
   <string name="blogs_rss_feeds_import_hint">Jepni URL-në e prurjes RSS</string>
+  <string name="blogs_rss_feeds_import_progress">Po importohet Prurje RSS…</string>
   <string name="blogs_rss_feeds_import_error">Na ndjeni! Pati një gabim me importimin e prurjes tuaj.</string>
-  <string name="blogs_rss_feeds_import_exists">Ajo prurje është importuar tashmë.</string>
+  <string name="blogs_rss_feeds_import_title">Importo prurje nga kartelë</string>
   <string name="blogs_rss_feeds">Prurje RSS</string>
   <string name="blogs_rss_feeds_manage_imported">Të importuara:</string>
   <string name="blogs_rss_feeds_manage_author">Autor:</string>
@@ -566,6 +589,92 @@ këmbyes aplikacionesh)\n\n2. Shtypni dhe mbajeni të shtypur figurën e Briar-i
   <string name="notify_sound_setting_disabled">Asnjë</string>
   <string name="choose_ringtone_title">Zgjidhni zile</string>
   <string name="cannot_load_ringtone">S\’ngarkohet dot zile</string>
+  <!--Mailbox-->
+  <string name="mailbox_settings_title">Kuti postare</string>
+  <string name="mailbox_setup_title">Ujdisje kutie postare</string>
+  <string name="mailbox_setup_intro">Një Kuti postare u lejon kontakteve tuaj t’ju dërgojnë mesazhe , kur s’jeni në linjë. Kutia postare do të marrë mesazhet tuaj dhe depozitojë deri sa të jeni në linjë.\n
+		\nAplikacionin Briar për Kuti postare mund ta instaloni në një pajisje tjetër. Mbajeni në prizë dhe nën Wi-Fi, që të jetë përherë në linjë.</string>
+  <string name="mailbox_setup_download">Së pari, instaloni aplikacionin Kuti postare te një pajisje tjetër, duke kërkuar për “Briar Mailbox” në Google Play, ose kudo ku shkarkuat Briar-in.\n
+		\nMandej lidheni Kutinë tuaj postare me Briar-in duke skanuar kodin QR të shfaqur te aplikacioni Kuti postare.</string>
+  <string name="mailbox_setup_download_link">Ndani Lidhje Shkarkimi</string>
+  <string name="mailbox_setup_button_scan">Skanoni kod QR Kutie postare</string>
+  <string name="permission_camera_qr_denied_body">Keni mohuar hyrjen te kamera, por skanimi i një kodi QR lyp përdorimin e kamerës.\n\nJu lutemi, shihni mundësinë e dhënies së hyrjes.</string>
+  <string name="mailbox_setup_connecting">Po bëhet lidhja me Kutinë postare…</string>
+  <!--This string is shown when connecting to a Mailbox for the first time. The placeholder will be replaced with a duration, e.g. "2 minutes".-->
+  <string name="mailbox_setup_connecting_info">Kjo mund të dojë deri në %1s</string>
+  <string name="mailbox_qr_code_too_old">Kodi QR që keni skanuar vjen prej një versioni të vjetër të Kutisë Postare të Briar-it.\n\nJu lutemi, përditësojeni Kutinë Postare të Briar-it me versionin më të ri dhe mandej riprovoni.</string>
+  <string name="mailbox_qr_code_too_new">Kodi QR që keni skanuar vjen prej një versioni më të ri të Kutisë Postare të Briar-it.\n\nJu lutemi, përmirësojeni Briar-in me versionin më të ri dhe mandej riprovoni.</string>
+  <string name="contact_qr_code_for_mailbox">Kodi QR që keni skanuar është për shtim të një kontakti Briar.\n\nNëse doni të shtoni një kontakt, ju lutemi, kaloni te lista e kontakteve dhe prekni ikonën +.</string>
+  <string name="mailbox_setup_qr_code_wrong_description">Kodi QR që keni skanuar s’vjen prej Kutisë Postare të Briar-it.\n\nJu lutemi, hapni aplikacionin Kuti Postare Briar në pajisjen tuaj me Kutinë Postare dhe skanoni kodin QR që paraqitet.</string>
+  <string name="mailbox_setup_already_paired_title">Kuti postare tashmë e lidhur</string>
+  <string name="mailbox_setup_already_paired_description">Shkëputeni Kutinë postare në pajisjen tuaj tjetër dhe riprovoni.</string>
+  <string name="mailbox_setup_io_error_title">S’u bë dot lidhje</string>
+  <string name="mailbox_setup_io_error_description">Siguroni që të dyja pajisjet të jenë të lidhura në Internet dhe riprovoni.</string>
+  <string name="mailbox_setup_assertion_error_title">Gabim kutie postare</string>
+  <string name="mailbox_setup_assertion_error_description">Nëse problemi vazhdon, ju lutemi, dërgoni përshtypjet (me të dhëna anonime) përmes aplikacionit Briar.</string>
+  <string name="mailbox_setup_camera_error_description">S’u përdor dot kamera. Riprovoni, ndoshta pas rinisjes së pajisjes.</string>
+  <string name="mailbox_setup_paired_title">I lidhur</string>
+  <string name="mailbox_setup_paired_description">Kutia juaj postare është lidhur me sukses me Briar-in.\n
+		\nMbajeni Kutinë tuaj postare të lidhur në rrjet energjie dhe me Wi-Fi, që të jetë përherë në linjë.</string>
+  <string name="tor_offline_title">Jo në linjë</string>
+  <string name="tor_offline_description">Siguroni që kjo pajisje të jetë në linjë dhe lidhjet me Internetin të jenë të lejuara.\n
+		\nMë pas, pritni që ikona glob te rregullimet e lidhjes të shndërrohet e gjelbër.</string>
+  <string name="tor_offline_button_check">Kontrolloni rregullime lidhjeje</string>
+  <string name="mailbox_status_title">Gjendje kutie postare</string>
+  <string name="mailbox_status_connected_title">Kutia postare po punon</string>
+  <string name="mailbox_status_problem_title">Briar-i po ka probleme në lidhjen me Kutinë postare</string>
+  <string name="mailbox_status_failure_title">S’ka Kuti postare</string>
+  <string name="mailbox_status_app_too_old_title">Briar-i është shumë i vjetër</string>
+  <string name="mailbox_status_app_too_old_message">Përditësojeni Briar-in me versionin më të ri të aplikacionit dhe riprovoni.</string>
+  <string name="mailbox_status_mailbox_too_old_title">Kutia postare është shumë e vjetër</string>
+  <string name="mailbox_status_mailbox_too_old_message">Përditësoni Kutinë tuaj postare me versionin më të ri të aplikacionit dhe riprovoni.</string>
+  <string name="mailbox_status_check_button">Kontrolloni Lidhjen</string>
+  <!--Example for string substitution: Last connection: 3min ago-->
+  <string name="mailbox_status_connected_info">Lidhja e fundit: %s</string>
+  <!--Indicates that there never was a connection to the mailbox. Last connection: Never-->
+  <string name="mailbox_status_connected_never">Kurrë</string>
+  <string name="mailbox_status_unlink_button">Shkëpute</string>
+  <string name="mailbox_status_unlink_dialog_title">Të hiqet lidhja për kutinë postare?</string>
+  <string name="mailbox_status_unlink_dialog_question">Jeni i sigurt se doni të hiqet lidhja për Kutinë tuaj postare?</string>
+  <string name="mailbox_status_unlink_dialog_warning">Nëse hiqni lidhjen e Kutisë tuaj postare, s’do të jeni në gjendje të merrni mesazhe, ndërkohë që Briar-i është i palidhur në internet.</string>
+  <string name="mailbox_status_unlink_no_wipe_title">U hoq lidhja e Kutisë tuaj postare</string>
+  <string name="mailbox_status_unlink_no_wipe_message">Herës tjetër që mundeni të hyni te pajisja e Kutisë tuaj postare, ju lutemi, hapni aplikacionin “Kuti postare” dhe prekni butonin “Hiqi lidhjen”, që të plotësohet procesi.\n\nNëse pajisjen e Kutisë tuaj postare s’e përdorni dot më, mos u shqetësoni. Të dhënat tuaja janë të fshehtëzuara, ndaj do të mbeten të sigurta, edhe nëse nuk e plotësoni procesin.</string>
+  <string name="mailbox_status_unlink_success">U hoq lidhja e Kutisë tuaj postare</string>
+  <string name="mailbox_error_notification_channel_title">Problem me Kuti postare Briar-i</string>
+  <string name="mailbox_error_notification_title">Kutia postare Briar s’është e passhme</string>
+  <string name="mailbox_error_notification_text">Prekeni që të ndreqet problemi.</string>
+  <string name="mailbox_error_wizard_button">Ndreqe problemin</string>
+  <string name="mailbox_error_wizard_title">Ndihmës diagnostikimi Kutie postare</string>
+  <string name="mailbox_error_wizard_question1">A mund të përdorni pajisjen tuaj Kuti postare?</string>
+  <string name="mailbox_error_wizard_answer1">Po, mund ta përdor atë tani.</string>
+  <string name="mailbox_error_wizard_answer2">Jo tani, por mund të marr leje ta përdor më vonë.</string>
+  <string name="mailbox_error_wizard_answer3">Jo, s’e përdor dot më.</string>
+  <string name="mailbox_error_wizard_info1_1">Shihni që pajisja Kuti postare të jetë në punë dhe e lidhur në Internet.</string>
+  <string name="mailbox_error_wizard_question1_1">Hapni aplikacionin Kuti postare. Çfarë shihni?</string>
+  <string name="mailbox_error_wizard_answer1_1">Shoh udhëzime për ujdisje të Kutisë postare</string>
+  <string name="mailbox_error_wizard_answer1_2">Shoh një kod QR</string>
+  <string name="mailbox_error_wizard_answer1_3">Shoh “Kutia postare po punon”</string>
+  <string name="mailbox_error_wizard_answer1_4">Shoh “Pajisje jo në linjë”</string>
+  <string name="mailbox_error_wizard_info1_1_1">Ju lutemi, shkëputeni Kutinë tuaj postare duke përdorur butonin më poshtë, mandej ndiqni udhëzimet te pajisja Kuti postare për ta rilidhur.</string>
+  <string name="mailbox_error_wizard_info_1_1_2">Ju lutemi, shkëputeni Kutinë tuaj postare duke përdorur butonin më poshtë, mandej skanoni kodin QR për ta rilidhur.</string>
+  <string name="mailbox_error_wizard_info1_1_3">Ju lutemi, përdorni butonin më poshtë për të kontrolluar lidhjen mes Briar-it dhe Mailbox-it.\n\n
+		Nëse lidhja dështon sërish:\n
+		\u2022 Shihni që aplikacionet Kuti postare dhe Briar të jenë ët përditësuar me versionin më të ri.\n
+		\u2022 Rinisni pajisjet tuaja Kuti postare dhe Briar dhe riprovoni.</string>
+  <string name="mailbox_error_wizard_info1_1_4">Shihni që pajisja kuti postare të jetë lidhur si duhet në Internet.\n\nKontrolloni që sahati te pajisja Kuti postare shfaq kohën, datën dhe zonën kohore të saktë.\n\nShihni që aplikacionet Kuti postare dhe Briar të jenë të përditësuar me versionin më të ri.\n\nRinisni pajisjet tuaja Kuti postare dhe Briar dhe riprovoni.</string>
+  <string name="mailbox_error_wizard_info2">Ju lutemi, rikthejuni kësaj skene kur të keni mundësi të përdorni pajisjen.</string>
+  <string name="mailbox_error_wizard_info3">Ju lutemi, shkëputeni kutinë tuaj postare duke përdorur butonin më poshtë.\n\nPasi të shkëputni Kutinë tuaj të vjetër postare, mund të ujdisni kurdo një Kuti të re postare.</string>
+  <!--About-->
+  <string name="about_title">Mbi</string>
+  <string name="briar_version">Version Briar-i: %s</string>
+  <string name="tor_version">Version Tor-i: %s</string>
+  <string name="links">Lidhje</string>
+  <string name="briar_website">\u2022 <a href="">Sajt</a></string>
+  <string name="briar_source_code">\u2022 <a href="">Kod burim</a></string>
+  <string name="briar_changelog">\u2022 <a href="">Regjistër ndryshimesh</a></string>
+  <string name="briar_privacy_policy">\u2022 <a href="">Rregulla Privatësie</a></string>
+  <!--Here translators can add their names or Transifex usernames(eg "Thanks to all the contributors at the Localization Lab, especially Tom, Matthew and Jerry")-->
+  <string name="translator_thanks">Faleminderit krejt kontribuesve prej Localization Lab</string>
   <!--Conversation Settings-->
   <string name="disappearing_messages_title">Mesazhe që treten</string>
   <string name="disappearing_messages_explanation_long">Aktivizimi i këtij rregullimi do të bëjë që
@@ -579,7 +688,8 @@ menjëherë dhe mbi mesazhet e kontaktit sapo të marrë mesazhin tuaj të radh�
 Këtë rregullim mund ta ndryshojë edhe kontakti juaj, për të dy ju.</string>
   <string name="learn_more">Mësoni më tepër</string>
   <string name="disappearing_messages_summary">Bëji mesazhet e ardhshëm në këtë bisedë të treten automatikisht pas 7\u00A0ditësh.</string>
-  <!--Settings Feedback-->
+  <!--Settings Actions-->
+  <string name="pref_category_actions">Veprime</string>
   <string name="send_feedback">Dërgoji përshtypjet</string>
   <!--Link Warning-->
   <string name="link_warning_title">Sinjalizim Lidhjeje</string>
@@ -588,7 +698,7 @@ Këtë rregullim mund ta ndryshojë edhe kontakti juaj, për të dy ju.</string>
   <string name="link_warning_open_link">Hape Lidhjen</string>
   <!--Crash Reporter-->
   <string name="crash_report_title">Njoftim Vithisjesh Briar-i</string>
-  <string name="briar_crashed">Na ndjeni, Briar-i u vithis.</string>
+  <string name="briar_crashed">Na ndjeni, Briar-i u vithis</string>
   <string name="not_your_fault">S\’është faji juaj.</string>
   <string name="please_send_report">Ju lutemi, na ndihmoni të ndërtojmë një Briar më të mirë, duke na dërguar një njoftim vithisjeje.</string>
   <string name="report_is_encrypted">Premtojmë që njoftimi fshehtëzohet dhe dërgohet në mënyrë të sigurt.</string>
@@ -596,6 +706,7 @@ Këtë rregullim mund ta ndryshojë edhe kontakti juaj, për të dy ju.</string>
   <string name="describe_crash">Përshkruani se ç\’ndodhi (në daçi)</string>
   <string name="enter_feedback">Jepni përshtypjet tuaja</string>
   <string name="optional_contact_email">Adresa juaj email (në daçi)</string>
+  <string name="privacy_policy">Duke na dërguar të dhëna, pajtoheni me <a href="">rregullat tona të privatësisë</a></string>
   <string name="include_debug_report_crash">Përfshi të dhëna anonime rreth vithisjes</string>
   <string name="include_debug_report_feedback">Përfshi të dhëna anonime rreth kësaj pajisjeje</string>
   <string name="dev_report_user_info">Informacion mbi përdoruesin</string>
@@ -605,6 +716,7 @@ Këtë rregullim mund ta ndryshojë edhe kontakti juaj, për të dy ju.</string>
   <string name="dev_report_memory">Kujtesë</string>
   <string name="dev_report_storage">Depozitim</string>
   <string name="dev_report_connectivity">Aftësi lidhjeje</string>
+  <string name="dev_report_network_usage">Përdorim rrjeti</string>
   <string name="dev_report_build_config">Formësim montimi</string>
   <string name="dev_report_logcat">Regjistër aplikacioni</string>
   <string name="dev_report_device_features">Veçori Pajisjeje</string>
@@ -629,11 +741,17 @@ Këtë rregullim mund ta ndryshojë edhe kontakti juaj, për të dy ju.</string>
   <string name="permission_location_request_body">Që të pikasë pajisje Bluetooth, Briar-i lyp leje të njohë vendin tuaj.\n\nBriar-i nuk e depoziton vendin tuaj, as e ndan me dikë.</string>
   <string name="permission_camera_location_title">Kamera dhe vend</string>
   <string name="permission_camera_location_request_body">Që të skanojë kodin QR, Briar-it i duhet të përdorë kamerën.\n\nQë të pikasë pajisje Bluetooth, Briar-i lyp leje të njohë vendin tuaj.\n\nBriar-i nuk e depoziton vendin tuaj, as e ndan me dikë.</string>
+  <string name="permission_camera_bluetooth_title">Kamerë dhe pajisje atypari</string>
+  <string name="permission_camera_bluetooth_request_body">Që të skanohet kodi QR, Briar-i lyp leje përdorimi të kamerës.\n\nQë të zbulohen pajisje Bluetooth, Briar-i lyp leje të gjejë dhe të lidhet me pajisje atypari.</string>
   <string name="permission_camera_denied_body">Keni mohuar hyrjen në kamera, por shtimi i kontakteve lyp përdorimin e kamerës.\n\nJu lutemi, shihni mundësinë e akordimit të hyrjes.</string>
   <string name="permission_location_denied_body">Keni mohuar hyrje te vendndodhja juaj, por Briar-i ka nevojë për këtë leje, që të mund të zbulojë pajisje Bluetooth.\n\nJu lutemi, shihni mundësinë e akordimit të hyrjes.</string>
   <string name="permission_location_setting_title">Rregullime vendndodhjeje</string>
   <string name="permission_location_setting_body">Që të gjenden pajisje të tjera përmes Bluetooth-i, rregullimi për vendndodhjen e pajisjes tuaj duhet të jetë i aktivizuar. Ju lutemi, që të vazhdohet, aktivizoni vendndodhjen. Më pas, mund ta çaktivizoni prapë.</string>
+  <string name="permission_location_setting_hotspot_body">Që të krijohet një hotspot Wi-Fi, duhet aktivizuar rregullimi për vendndodhje të pajisjes tuaj. Ju lutemi, që të vazhdohet, aktivizoni këtë rregullim. Mund ta çaktivizoni sërish më pas.</string>
   <string name="permission_location_setting_button">Aktivizoni vendndodhje</string>
+  <string name="permission_bluetooth_title">Leje pajisjesh atypari</string>
+  <string name="permission_bluetooth_body">Që të përdoret komunikim Bluetooth, Briar-i lyp leje të gjejë dhe të lidhet me pajisje atypari.</string>
+  <string name="permission_bluetooth_denied_body">Keni mohuar hyrje te pajisje atyprai, por Briar-i ka nevojë për këtë leje, që të përdorë Bluetooth-in.\n\nJu lutemi, shihni mundësinë e akordimit të hyrjes.</string>
   <string name="qr_code">Kod QR</string>
   <string name="show_qr_code_fullscreen">Shfaqe kodin QR sa tërë ekrani</string>
   <!--App Locking-->
@@ -648,6 +766,93 @@ Këtë rregullim mund ta ndryshojë edhe kontakti juaj, për të dy ju.</string>
 Për privatësi, krejt lidhjet Internet kalojnë përmes rrjetit Tor.\n\n
 Nëse me një kontakt mund të bëhet lidhja përmes metodash të shumta,\n\n
 Briar-i i përdor ato paralelisht.</string>
+  <!--Share app offline-->
+  <string name="hotspot_title">Ndaje me të tjerë “offline” këtë aplikacion</string>
+  <string name="hotspot_intro">Jepeni këtë aplikacion për dikë atypari pa lidhje Internet, duke përdorur Wi-Fi-n e telefonit tuaj.
+		\n\nTelefoni juaj do të nisë një Wi-Fi hotspot. Persona atypari mund të lidhen me hotspot-in dhe të shkarkojnë aplikacionin Briar që nga telefoni juaj.</string>
+  <string name="hotspot_button_start_sharing">Nise hotspot-in</string>
+  <string name="hotspot_button_stop_sharing">Ndale hotspot-in</string>
+  <string name="hotspot_progress_text_start">Po ujdiset hotspot…</string>
+  <string name="hotspot_notification_channel_title">Hotspot Wi-Fi</string>
+  <string name="hotspot_notification_title">Dhënie Briar-i “offline”</string>
+  <string name="hotspot_button_connected">Pasuesi</string>
+  <string name="permission_hotspot_location_request_body">Që të krijohet një hotspot Wi-Fi, Briar-i lyp leje për të njohur vendndodhjen tuaj.\n\nBriar-i nuk e depoziton apo ia jep dikujt vendndodhjen tuaj.</string>
+  <string name="permission_hotspot_location_request_precise_body">Që të krijohet një hotspot Wi-Fi, Briar-i lyp leje për të njohur saktësisht vendndodhjen tuaj.\n\nBriar-i nuk e depoziton apo ia jep dikujt atë.</string>
+  <string name="permission_hotspot_location_denied_body">Keni mohuar njohjen e vendndodhjes tuaj, ndërkohë që Briar-it i duhet kjo leje për të krijuar një hotspot Wi-Fi.\n\nJu lutemi, shihni mundësinë e akordimit të kësaj lejeje.</string>
+  <string name="permission_hotspot_location_denied_precise_body">Keni mohuar njohjen e saktë të vendndodhjes tuaj, ndërkohë që Briar-it i duhet kjo leje për të krijuar një hotspot Wi-Fi.\n\nJu lutemi, shihni mundësinë e akordimit të kësaj lejeje.</string>
+  <string name="wifi_settings_title">Rregullim Wi-Fi-i</string>
+  <string name="wifi_settings_request_enable_body">Që të krijohet një hotspot Wi-Fi, Briar-it i duhet të përdorë Wi-Fi-n. Ju lutemi, aktivizojeni.</string>
+  <string name="hotspot_tab_manual">Dorazi</string>
+  <!--The placeholder to be inserted into the string 'hotspot_manual_wifi': People can connect by %s-->
+  <string name="hotspot_scanning_a_qr_code">duke skanuar një kod QR</string>
+  <!--Wi-Fi setup-->
+  <!--The %s placeholder will be replaced with the translation of 'hotspot_scanning_a_qr_code'-->
+  <string name="hotspot_manual_wifi">Telefoni juaj po ofron një hotspot Wi-Fi. Personat që duan të shkarkojnë Briar-in, mund të lidhen me hotspot-in duke shtuar te te rregullimet e pajisjeve të tyre për Wi-Fi-n hollësitë më poshtë ose duke %s. Kur të jenë lidhur me hotspot-in, shtypni “Pasuesi”.</string>
+  <string name="hotspot_manual_wifi_ssid">Emër rrjet</string>
+  <string name="hotspot_qr_wifi">Telefoni juaj po ofron një hotspot Wi-Fi. Persona që duan të shkarkojnë Briar-in mund të lidhen me hotspot-in duke skanuar këtë kod QR. Kur të jenë lidhur me hotspot-in, shtypni “Pasuesi”.</string>
+  <string name="hotspot_no_peers_connected">S’ka pajisje të lidhur</string>
+  <plurals name="hotspot_peers_connected">
+    <item quantity="one">%s pajisje e lidhur</item>
+    <item quantity="other">%s pajisje të lidhura</item>
+  </plurals>
+  <!--Download link-->
+  <!--The %s placeholder will be replaced with the translation of 'hotspot_scanning_a_qr_code'-->
+  <string name="hotspot_manual_site">Telefoni juaj po ofron një hotspot Wi-Fi. Persona që duan të shkarkojnë Briar-in mund të lidhen me hotspot-in duke shtypur lidhjen vijuese në një shfletues ose %s.</string>
+  <string name="hotspot_manual_site_address">Adresë (URL)</string>
+  <string name="hotspot_qr_site">Telefoni juaj po ofron një hotspot Wi-Fi. Persona që janë të lidhur me hotspot-in mund të shkarkojnë Briar-in duke skanuar këtë kod QR.</string>
+  <!--e.g. Download Briar 1.2.20-->
+  <string name="website_download_title_1">Shkarkoni Briar %s</string>
+  <string name="website_download_intro_1">Dikush atyparu ju dha Briar-in</string>
+  <string name="website_download_button">Shkarkojeni Briar-in</string>
+  <string name="website_download_outro">Pasi të jetë plotësuar shkarkimi, hapni kartelën e shkarkuar dhe instalojeni.</string>
+  <string name="website_troubleshooting_title">Diagnostikim</string>
+  <string name="website_troubleshooting_1">Nëse s’mund të shkarkoni aplikacionin, provoni me një aplikacion tjetër shfletuesi.</string>
+  <string name="website_troubleshooting_2_old">Që të instaloni aplikacionin e shkarkuar, mund t’ju duhet të lejoni instalim aplikacionesh nga “Burime të panjohura”, që nga rregullimet e sistemit. Më pas, mund t’ju duhet të shkarkoni sërish aplikacionin. Rekomandojmë çaktivizimin e rregullimit “Burime të panjohura”, pas instalimit të aplikacionit.</string>
+  <string name="website_troubleshooting_2_new">Që të instaloni aplikacionin e shkarkuar, mund t’ju duhet të lejoni shfletuesin të instalojë aplikacione të panjohura. Pas instalimit të aplikacionit, rekomandojmë çaktivizimin e lejes për instalim aplikacionesh të panjohur nga shfletuesi.</string>
+  <string name="hotspot_help_wifi_title">Probleme me lidhjen me Wi-Fi:</string>
+  <string name="hotspot_help_wifi_1">Provoni çaktivizimin dhe riaktivizimin e Wi-Fi-it në të dy telefonat dhe riprovoni.</string>
+  <string name="hotspot_help_wifi_2">Nëse telefoni juaj ankohet se Wi-Fi s’ka internet, i thoni se dëshironi të jeni i lidhur sido qoftë.</string>
+  <string name="hotspot_help_wifi_3">Rinisni telefonin që xhiron hotspot-in Wi-Fi, mandej rinisni Briar-in dhe riprovoni ta jepni lidhjen.</string>
+  <string name="hotspot_help_site_title">Probleme në vizita të sajtit vendor:</string>
+  <string name="hotspot_help_site_1">Rikontrolloni se e keni dhënë adresën saktësisht siç shfaqet. Një gabim i vockël mund të bëjë të dështojë.</string>
+  <string name="hotspot_help_site_2">Sigurohuni se telefoni juaj është ende i lidhur me Wi-Fi e duhur (shihni më sipër), kur provoni të hyni te sajti.</string>
+  <string name="hotspot_help_site_3">Nëse keni një aplikacion firewall-i, shihni se mos po e bllokon hyrjen.</string>
+  <string name="hotspot_help_site_4">Nëse mund ta vizitoni sajtin, por jo të shkarkoni aplikacionin Briar, provoni me një tjetër aplikacion shfletuesi.</string>
+  <string name="hotspot_help_fallback_title">Asgjë s’bën punë?</string>
+  <string name="hotspot_help_fallback_intro">Mund të provoni ta ruani aplikacionin si një kartelë .apk, për ta dhënë me ndonjë rrugë tjetër. Pasi kartela të jetë shpërngulur te pajisja tjetër, mund të përdoret për të instaluar Briar-in.
+		\n\nNdihmëz: Për ta dhënë përmes Bluetooth-i, mund t’ju duhet së pari ta riemërtoni kartelën, në mënyrë që të përfundojë me .zip.</string>
+  <string name="hotspot_help_fallback_button">Ruaje aplikacionin</string>
+  <!--error handling-->
+  <string name="hotspot_error_intro">Diç shkoi ters teksa provohej të jepej aplikacioni përmes Wi-Fi:</string>
+  <string name="hotspot_error_no_wifi_direct">Pajisja nuk mbulon Wi-Fi Direct</string>
+  <string name="hotspot_error_start_callback_failed">S’u arrit të nisej hotspot-i: gabim %s</string>
+  <string name="hotspot_error_start_callback_failed_unknown">Nga një gabim i panjohur, hotspot-i s’u arrit të nisej, arsye %d</string>
+  <string name="hotspot_error_start_callback_no_group_info">S’u arrit të nisej hotspot-i: pa hollësi grupi</string>
+  <string name="hotspot_error_web_server_start">Gabim në nisjen e shërbyesit</string>
+  <string name="hotspot_error_web_server_serve">Gabim në paraqitjen e sajtit.\n\nJu lutemi, nëse problemi vazhdon, dërgoni njoftim (me të dhëna anonime) përmes aplikacionit Briar.</string>
+  <string name="hotspot_flag_test">Kujdes: Ky aplikacion qe instaluar me Android Studio dhe NUK mund të instalohet në një pajisje tjetër.</string>
+  <string name="hotspot_error_framework_busy">S’arrihet të niset hotspot-i.\n\nNëse keni një tjetër hotspot në punë, ose e jepni lidhjen tuaj Internet përmes Wi-Fi, provoni ta ndalni dhe të riprovoni pas kësaj.</string>
+  <!--Transfer Data via Removable Drives-->
+  <string name="removable_drive_menu_title">Lidhu përmes Disku të Heqshëm</string>
+  <string name="removable_drive_intro">Nëse s’lidheni dot me kontaktin tuaj përmes Interneti, Wi-Fi apo Bluetooth-i, Briar-i mund të shpërngulë mesazhe edhe përmes disqesh të heqshëm, bie fjala një diskth USB, ose një kartë SD.</string>
+  <string name="removable_drive_explanation">Nëse s’lidheni dot me kontaktin tuaj përmes Interneti, Wi-Fi apo Bluetooth-i, Briar-i mund të shpërngulë mesazhe edhe përmes disqesh të heqshëm, bie fjala një diskth USB, ose një kartë SD.\n\nKur përdorni butonin “Dërgo të Dhëna”, çfarëdo të dhënash që po presin të dërgohen te kontakti, do të shkruhen te disku i heqshëm. Kjo përfshin mesazhe privates, bashkëngjitje, blogje, forume dhe grupe private.\n\nPara se të shkruhet te disku i heqshëm, gjithçka do të fshehtëzohet.\n\nKur kontakti juaj merr diskun e heqshëm, ai mund të përdorë butonin “Merr të Dhëna” që të importoni mesazhet në Briar.</string>
+  <string name="removable_drive_title_send">Dërgoni të dhëna</string>
+  <string name="removable_drive_title_receive">Merrni të dhëna</string>
+  <string name="removable_drive_send_intro">Prekni butonin më poshtë që të krijoni një kartelë të re që përmban mesazhe të fshehtëzuar. Mund të zgjidhni ku të ruhen kartelat.\n\nNëse doni të ruhet kartela në një disk të heqshëm, futeni diskun tani.</string>
+  <string name="removable_drive_send_no_data">Aktualisht s’ka mesazhe në pritje për t’u dërguar te ky kontakt.</string>
+  <string name="removable_drive_send_not_supported">Ky kontakt po përdor një version të dikurshëm të Briar-it, ose një pajisje të vjetër, që nuk mbulon këtë veçori.</string>
+  <string name="removable_drive_send_button">Zgjidhni kartelë për eksport</string>
+  <string name="removable_drive_ongoing">Ju lutemi, pritni të plotësohet puna që është duke u kryer</string>
+  <string name="removable_drive_receive_intro">Prekni butonin më poshtë që të zgjidhni kartelën që ju ka dërguar kontakti juaj.\n\nNëse kartela gjendet në një disk të heqshëm, futeni diskun tani.</string>
+  <string name="removable_drive_receive_button">Zgjidhni kartelë për import</string>
+  <string name="removable_drive_success_send_title">Eksportim i suksesshëm</string>
+  <string name="removable_drive_success_send_text">Të dhënat u eksportuan me sukses. Tani keni 28 ditë për të shpërngulur kartelën te kontakti juaj.\n\nNëse kartela gjendet në një disk të heqshëm, përdorni njoftimin te shtylla e gjendjes për të bërë shkëputjen e diskut, përpara se ta hiqni.</string>
+  <string name="removable_drive_success_receive_title">Importim i suksesshëm</string>
+  <string name="removable_drive_success_receive_text">Janë marrë krejt mesazhet e fshehtëzuar që përmbante kjo kartelë.</string>
+  <string name="removable_drive_error_send_title">Gabim në eksportim të dhënash</string>
+  <string name="removable_drive_error_send_text">Pati një gabim gjatë shkrimit të të dhënave te kartela.\n\nNëse po përdorni një disk të heqshëm, sigurohuni se është futur si duhet dhe riprovoni.\n\nNëse gabimi vazhdon, ju lutemi, dërgoni një njoftim për t’ia bërë problemin të ditur ekipit të Briar-it.</string>
+  <string name="removable_drive_error_receive_title">Gabim në importim të dhënash</string>
+  <string name="removable_drive_error_receive_text">Kartela e përzgjedhur nuk përmbante ndonjë gjë të kuptueshme nga Briar-i.\n\nJu lutemi, kontrolloni se keni zgjedhur kartelën e duhur.\n\nNëse kontakti e krijoi kartelën më herët se 28 ditë më parë, Briar-i s’do të jetë në gjendje ta hapë.</string>
   <!--Screenshots-->
   <!--This is a name to be used in screenshots. Feel free to change it to a local name.-->
   <string name="screenshot_alice">Mira</string>

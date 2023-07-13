@@ -1,11 +1,10 @@
 package org.briarproject.bramble.record;
 
 import org.briarproject.bramble.api.FormatException;
-import org.briarproject.bramble.api.Predicate;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.record.Record;
 import org.briarproject.bramble.api.record.RecordReader;
 import org.briarproject.bramble.util.ByteUtils;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -45,7 +44,7 @@ class RecordReaderImpl implements RecordReader {
 
 	@Nullable
 	@Override
-	public Record readRecord(Predicate<Record> accept, Predicate<Record> ignore)
+	public Record readRecord(RecordPredicate accept, RecordPredicate ignore)
 			throws IOException {
 		while (true) {
 			if (eof()) return null;

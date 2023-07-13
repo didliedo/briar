@@ -1,5 +1,6 @@
 package org.briarproject.bramble.rendezvous;
 
+import org.briarproject.bramble.api.Cancellable;
 import org.briarproject.bramble.api.connection.ConnectionManager;
 import org.briarproject.bramble.api.contact.PendingContact;
 import org.briarproject.bramble.api.contact.PendingContactState;
@@ -27,14 +28,12 @@ import org.briarproject.bramble.api.rendezvous.event.RendezvousConnectionOpenedE
 import org.briarproject.bramble.api.rendezvous.event.RendezvousPollEvent;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.system.TaskScheduler;
-import org.briarproject.bramble.api.system.TaskScheduler.Cancellable;
 import org.briarproject.bramble.test.BrambleMockTestCase;
 import org.briarproject.bramble.test.CaptureArgumentAction;
 import org.briarproject.bramble.test.DbExpectations;
 import org.briarproject.bramble.test.ImmediateExecutor;
 import org.briarproject.bramble.test.PredicateMatcher;
 import org.jmock.Expectations;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Random;
@@ -93,14 +92,10 @@ public class RendezvousPollerImplTest extends BrambleMockTestCase {
 			getTransportProperties(3);
 	private final boolean alice = new Random().nextBoolean();
 
-	private RendezvousPollerImpl rendezvousPoller;
-
-	@Before
-	public void setUp() {
-		rendezvousPoller = new RendezvousPollerImpl(ioExecutor, scheduler, db,
-				identityManager, transportCrypto, rendezvousCrypto,
-				pluginManager, connectionManager, eventBus, clock);
-	}
+	private final RendezvousPollerImpl rendezvousPoller =
+			new RendezvousPollerImpl(ioExecutor, scheduler, db,
+					identityManager, transportCrypto, rendezvousCrypto,
+					pluginManager, connectionManager, eventBus, clock);
 
 	@Test
 	public void testAddsPendingContactsAndSchedulesPollingAtStartup()

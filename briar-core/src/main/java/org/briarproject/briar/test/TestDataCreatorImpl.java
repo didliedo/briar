@@ -1,9 +1,12 @@
 package org.briarproject.briar.test;
 
+import org.briarproject.bramble.api.FeatureFlags;
 import org.briarproject.bramble.api.FormatException;
 import org.briarproject.bramble.api.contact.Contact;
 import org.briarproject.bramble.api.contact.ContactId;
 import org.briarproject.bramble.api.contact.ContactManager;
+import org.briarproject.bramble.api.crypto.CryptoComponent;
+import org.briarproject.bramble.api.crypto.PrivateKey;
 import org.briarproject.bramble.api.crypto.SecretKey;
 import org.briarproject.bramble.api.db.DatabaseComponent;
 import org.briarproject.bramble.api.db.DbException;
@@ -12,7 +15,6 @@ import org.briarproject.bramble.api.identity.AuthorId;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.identity.LocalAuthor;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.BluetoothConstants;
 import org.briarproject.bramble.api.plugin.LanTcpConstants;
 import org.briarproject.bramble.api.plugin.TorConstants;
@@ -37,8 +39,15 @@ import org.briarproject.briar.api.forum.ForumPost;
 import org.briarproject.briar.api.messaging.MessagingManager;
 import org.briarproject.briar.api.messaging.PrivateMessage;
 import org.briarproject.briar.api.messaging.PrivateMessageFactory;
+import org.briarproject.briar.api.privategroup.GroupMessage;
+import org.briarproject.briar.api.privategroup.GroupMessageFactory;
+import org.briarproject.briar.api.privategroup.PrivateGroup;
+import org.briarproject.briar.api.privategroup.PrivateGroupFactory;
+import org.briarproject.briar.api.privategroup.PrivateGroupManager;
+import org.briarproject.briar.api.privategroup.invitation.GroupInvitationFactory;
 import org.briarproject.briar.api.test.TestAvatarCreator;
 import org.briarproject.briar.api.test.TestDataCreator;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -81,13 +90,20 @@ public class TestDataCreatorImpl implements TestDataCreator {
 
 	private final DatabaseComponent db;
 	private final IdentityManager identityManager;
+	private final CryptoComponent crypto;
 	private final ContactManager contactManager;
 	private final TransportPropertyManager transportPropertyManager;
 	private final MessagingManager messagingManager;
 	private final BlogManager blogManager;
 	private final ForumManager forumManager;
+	private final PrivateGroupManager privateGroupManager;
+	private final PrivateGroupFactory privateGroupFactory;
+	private final GroupMessageFactory groupMessageFactory;
+	private final GroupInvitationFactory groupInvitationFactory;
 	private final TestAvatarCreator testAvatarCreator;
 	private final AvatarMessageEncoder avatarMessageEncoder;
+
+	private final FeatureFlags featureFlags;
 
 	@IoExecutor
 	private final Executor ioExecutor;
@@ -100,12 +116,19 @@ public class TestDataCreatorImpl implements TestDataCreator {
 			GroupFactory groupFactory,
 			PrivateMessageFactory privateMessageFactory,
 			BlogPostFactory blogPostFactory, DatabaseComponent db,
-			IdentityManager identityManager, ContactManager contactManager,
+			IdentityManager identityManager,
+			CryptoComponent crypto,
+			ContactManager contactManager,
 			TransportPropertyManager transportPropertyManager,
 			MessagingManager messagingManager, BlogManager blogManager,
 			ForumManager forumManager,
+			PrivateGroupManager privateGroupManager,
+			PrivateGroupFactory privateGroupFactory,
+			GroupMessageFactory groupMessageFactory,
+			GroupInvitationFactory groupInvitationFactory,
 			TestAvatarCreator testAvatarCreator,
 			AvatarMessageEncoder avatarMessageEncoder,
+			FeatureFlags featureFlags,
 			@IoExecutor Executor ioExecutor) {
 		this.authorFactory = authorFactory;
 		this.clock = clock;
@@ -114,27 +137,35 @@ public class TestDataCreatorImpl implements TestDataCreator {
 		this.blogPostFactory = blogPostFactory;
 		this.db = db;
 		this.identityManager = identityManager;
+		this.crypto = crypto;
 		this.contactManager = contactManager;
 		this.transportPropertyManager = transportPropertyManager;
 		this.messagingManager = messagingManager;
 		this.blogManager = blogManager;
 		this.forumManager = forumManager;
+		this.privateGroupManager = privateGroupManager;
+		this.privateGroupFactory = privateGroupFactory;
+		this.groupMessageFactory = groupMessageFactory;
+		this.groupInvitationFactory = groupInvitationFactory;
 		this.testAvatarCreator = testAvatarCreator;
 		this.avatarMessageEncoder = avatarMessageEncoder;
+		this.featureFlags = featureFlags;
 		this.ioExecutor = ioExecutor;
 	}
 
 	@Override
 	public void createTestData(int numContacts, int numPrivateMsgs,
 			int avatarPercent, int numBlogPosts, int numForums,
-			int numForumPosts) {
+			int numForumPosts, int numPrivateGroups,
+			int numPrivateGroupMessages) {
 		if (numContacts == 0) throw new IllegalArgumentException();
 		if (avatarPercent < 0 || avatarPercent > 100)
 			throw new IllegalArgumentException();
 		ioExecutor.execute(() -> {
 			try {
 				createTestDataOnIoExecutor(numContacts, numPrivateMsgs,
-						avatarPercent, numBlogPosts, numForums, numForumPosts);
+						avatarPercent, numBlogPosts, numForums, numForumPosts,
+						numPrivateGroups, numPrivateGroupMessages);
 			} catch (DbException e) {
 				logException(LOG, WARNING, e);
 			}
@@ -144,13 +175,20 @@ public class TestDataCreatorImpl implements TestDataCreator {
 	@IoExecutor
 	private void createTestDataOnIoExecutor(int numContacts, int numPrivateMsgs,
 			int avatarPercent, int numBlogPosts, int numForums,
-			int numForumPosts) throws DbException {
+			int numForumPosts, int numPrivateGroups,
+			int numPrivateGroupMessages) throws DbException {
 		List<Contact> contacts = createContacts(numContacts, avatarPercent);
 		createPrivateMessages(contacts, numPrivateMsgs);
 		createBlogPosts(contacts, numBlogPosts);
 		List<Forum> forums = createForums(contacts, numForums);
 		for (Forum forum : forums) {
 			createRandomForumPosts(forum, contacts, numForumPosts);
+		}
+		List<PrivateGroup> groups =
+				createPrivateGroups(contacts, numPrivateGroups);
+		for (PrivateGroup group : groups) {
+			createRandomPrivateGroupMessages(group, contacts,
+					numPrivateGroupMessages);
 		}
 	}
 
@@ -247,7 +285,7 @@ public class TestDataCreatorImpl implements TestDataCreator {
 		// Tor
 		TransportProperties tor = new TransportProperties();
 		String torAddress = getRandomTorAddress();
-		tor.put(TorConstants.PROP_ONION_V2, torAddress);
+		tor.put(TorConstants.PROP_ONION_V3, torAddress);
 		props.put(TorConstants.ID, tor);
 
 		return props;
@@ -292,13 +330,9 @@ public class TestDataCreatorImpl implements TestDataCreator {
 	}
 
 	private String getRandomTorAddress() {
-		StringBuilder sb = new StringBuilder();
-		// address
-		for (int i = 0; i < 16; i++) {
-			if (random.nextBoolean()) sb.append(2 + random.nextInt(6));
-			else sb.append((char) (random.nextInt(26) + 'a'));
-		}
-		return sb.toString();
+		byte[] pubkeyBytes =
+				crypto.generateSignatureKeyPair().getPublic().getEncoded();
+		return crypto.encodeOnion(pubkeyBytes);
 	}
 
 	private void addAvatar(Contact c) throws DbException {
@@ -351,7 +385,7 @@ public class TestDataCreatorImpl implements TestDataCreator {
 
 	private void createRandomPrivateMessage(ContactId contactId,
 			GroupId groupId, int num) throws DbException {
-		long timestamp = clock.currentTimeMillis() - num * 60 * 1000;
+		long timestamp = clock.currentTimeMillis() - (long) num * 60 * 1000;
 		String text = getRandomText();
 		boolean local = random.nextBoolean();
 		boolean autoDelete = random.nextBoolean();
@@ -380,6 +414,7 @@ public class TestDataCreatorImpl implements TestDataCreator {
 
 	private void createBlogPosts(List<Contact> contacts, int numBlogPosts)
 			throws DbException {
+		if (!featureFlags.shouldEnableBlogsInCore()) return;
 		LocalAuthor localAuthor = identityManager.getLocalAuthor();
 		Blog ours = blogManager.getPersonalBlog(localAuthor);
 		for (Contact contact : contacts) {
@@ -400,7 +435,7 @@ public class TestDataCreatorImpl implements TestDataCreator {
 	private void addBlogPost(ContactId contactId, LocalAuthor author, int num)
 			throws DbException {
 		Blog blog = blogManager.getPersonalBlog(author);
-		long timestamp = clock.currentTimeMillis() - num * 60 * 1000;
+		long timestamp = clock.currentTimeMillis() - (long) num * 60 * 1000;
 		String text = getRandomText();
 		try {
 			BlogPost blogPost = blogPostFactory.createBlogPost(blog.getId(),
@@ -414,6 +449,7 @@ public class TestDataCreatorImpl implements TestDataCreator {
 
 	private List<Forum> createForums(List<Contact> contacts, int numForums)
 			throws DbException {
+		if (!featureFlags.shouldEnableForumsInCore()) return emptyList();
 		List<Forum> forums = new ArrayList<>(numForums);
 		for (int i = 0; i < numForums; i++) {
 			// create forum
@@ -438,7 +474,7 @@ public class TestDataCreatorImpl implements TestDataCreator {
 		for (int i = 0; i < numForumPosts; i++) {
 			Contact contact = contacts.get(random.nextInt(contacts.size()));
 			LocalAuthor author = localAuthors.get(contact);
-			long timestamp = clock.currentTimeMillis() - i * 60 * 1000;
+			long timestamp = clock.currentTimeMillis() - (long) i * 60 * 1000;
 			String text = getRandomText();
 			MessageId parent = null;
 			if (random.nextBoolean() && posts.size() > 0) {
@@ -453,6 +489,86 @@ public class TestDataCreatorImpl implements TestDataCreator {
 		}
 		if (LOG.isLoggable(INFO)) {
 			LOG.info("Created " + numForumPosts + " forum posts.");
+		}
+	}
+
+	private List<PrivateGroup> createPrivateGroups(List<Contact> contacts,
+			int numPrivateGroups) throws DbException {
+		if (!featureFlags.shouldEnablePrivateGroupsInCore()) return emptyList();
+		List<PrivateGroup> groups = new ArrayList<>(numPrivateGroups);
+		for (int i = 0; i < numPrivateGroups; i++) {
+			// create private group
+			String name = GROUP_NAMES[random.nextInt(GROUP_NAMES.length)];
+			LocalAuthor creator = identityManager.getLocalAuthor();
+			PrivateGroup group =
+					privateGroupFactory.createPrivateGroup(name, creator);
+			GroupMessage joinMsg = groupMessageFactory.createJoinMessage(
+					group.getId(),
+					clock.currentTimeMillis() - (long) (100 - i) * 60 * 1000,
+					creator
+			);
+			privateGroupManager.addPrivateGroup(group, joinMsg, true);
+			groups.add(group);
+		}
+		if (LOG.isLoggable(INFO)) {
+			LOG.info("Created " + numPrivateGroups + " private groups.");
+		}
+		return groups;
+	}
+
+	private void createRandomPrivateGroupMessages(PrivateGroup group,
+			List<Contact> contacts, int amount) throws DbException {
+		List<GroupMessage> messages = new ArrayList<>();
+		PrivateKey creatorPrivateKey =
+				identityManager.getLocalAuthor().getPrivateKey();
+		int numMembers = random.nextInt(contacts.size());
+		if (numMembers == 0) numMembers++;
+		Map<Contact, MessageId> membersLastMessage = new HashMap<>();
+		List<Contact> members = new ArrayList<>(numMembers);
+		for (int i = 0; i < numMembers; i++) {
+			Contact contact = contacts.get(i);
+			members.add(contact);
+		}
+		for (int i = 0; i < amount; i++) {
+			Contact contact = members.get(random.nextInt(numMembers));
+			LocalAuthor author = localAuthors.get(contact);
+			long timestamp =
+					clock.currentTimeMillis() -
+							(long) (amount - i) * 60 * 1000;
+
+			GroupMessage msg;
+			if (!membersLastMessage.containsKey(contact)) {
+				// join message as first message of member
+				shareGroup(contact.getId(), group.getId());
+				long inviteTimestamp = timestamp - 1;
+				byte[] creatorSignature =
+						groupInvitationFactory.signInvitation(contact,
+								group.getId(), inviteTimestamp,
+								creatorPrivateKey);
+				msg = groupMessageFactory.createJoinMessage(group.getId(),
+								timestamp, author, inviteTimestamp,
+								creatorSignature);
+			} else {
+				// random text after first message
+				String text = getRandomText();
+				MessageId parent = null;
+				if (random.nextBoolean() && messages.size() > 0) {
+					GroupMessage parentMessage =
+							messages.get(random.nextInt(messages.size()));
+					parent = parentMessage.getMessage().getId();
+				}
+				MessageId lastMsg = membersLastMessage.get(contact);
+				msg = groupMessageFactory.createGroupMessage(
+						group.getId(), timestamp, parent, author, text,
+						lastMsg);
+				messages.add(msg);
+			}
+			membersLastMessage.put(contact, msg.getMessage().getId());
+			db.transaction(false, txn ->
+					db.receiveMessage(txn, contact.getId(), msg.getMessage()));
+		}
+		if (LOG.isLoggable(INFO)) {
+			LOG.info("Created " + amount + " private group messages.");
 		}
 	}
 

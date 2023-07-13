@@ -17,7 +17,6 @@ import org.briarproject.bramble.api.event.Event;
 import org.briarproject.bramble.api.event.EventBus;
 import org.briarproject.bramble.api.event.EventListener;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.event.ContactConnectedEvent;
 import org.briarproject.bramble.api.plugin.event.ContactDisconnectedEvent;
 import org.briarproject.bramble.api.system.AndroidExecutor;
@@ -26,10 +25,10 @@ import org.briarproject.briar.android.viewmodel.LiveResult;
 import org.briarproject.briar.api.avatar.event.AvatarUpdatedEvent;
 import org.briarproject.briar.api.client.MessageTracker;
 import org.briarproject.briar.api.conversation.ConversationManager;
-import org.briarproject.briar.api.conversation.ConversationMessageHeader;
-import org.briarproject.briar.api.conversation.event.ConversationMessageReceivedEvent;
+import org.briarproject.briar.api.conversation.event.ConversationMessageTrackedEvent;
 import org.briarproject.briar.api.identity.AuthorInfo;
 import org.briarproject.briar.api.identity.AuthorManager;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -131,13 +130,14 @@ public class ContactsViewModel extends DbViewModel implements EventListener {
 		} else if (e instanceof ContactRemovedEvent) {
 			LOG.info("Contact removed, removing item");
 			removeItem(((ContactRemovedEvent) e).getContactId());
-		} else if (e instanceof ConversationMessageReceivedEvent) {
-			LOG.info("Conversation message received, updating item");
-			ConversationMessageReceivedEvent<?> p =
-					(ConversationMessageReceivedEvent<?>) e;
-			ConversationMessageHeader h = p.getMessageHeader();
-			updateItem(p.getContactId(), item -> new ContactListItem(item, h),
-					true);
+		} else if (e instanceof ConversationMessageTrackedEvent) {
+			LOG.info("Conversation message tracked, updating item");
+			ConversationMessageTrackedEvent p =
+					(ConversationMessageTrackedEvent) e;
+			long timestamp = p.getTimestamp();
+			boolean read = p.getRead();
+			updateItem(p.getContactId(),
+					item -> new ContactListItem(item, timestamp, read), true);
 		} else if (e instanceof AvatarUpdatedEvent) {
 			AvatarUpdatedEvent a = (AvatarUpdatedEvent) e;
 			updateItem(a.getContactId(), item -> new ContactListItem(item,

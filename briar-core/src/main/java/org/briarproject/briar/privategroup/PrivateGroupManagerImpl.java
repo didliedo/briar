@@ -17,7 +17,6 @@ import org.briarproject.bramble.api.identity.Author;
 import org.briarproject.bramble.api.identity.AuthorId;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.identity.LocalAuthor;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.Message;
@@ -40,6 +39,7 @@ import org.briarproject.briar.api.privategroup.Visibility;
 import org.briarproject.briar.api.privategroup.event.ContactRelationshipRevealedEvent;
 import org.briarproject.briar.api.privategroup.event.GroupDissolvedEvent;
 import org.briarproject.briar.api.privategroup.event.GroupMessageAddedEvent;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -55,6 +55,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.annotation.concurrent.ThreadSafe;
 import javax.inject.Inject;
 
+import static org.briarproject.bramble.api.sync.validation.IncomingMessageHook.DeliveryAction.ACCEPT_SHARE;
 import static org.briarproject.briar.api.identity.AuthorInfo.Status.UNVERIFIED;
 import static org.briarproject.briar.api.identity.AuthorInfo.Status.VERIFIED;
 import static org.briarproject.briar.api.privategroup.MessageType.JOIN;
@@ -149,40 +150,35 @@ class PrivateGroupManagerImpl extends BdfIncomingMessageHook
 	}
 
 	@Override
-	public void removePrivateGroup(GroupId g) throws DbException {
-		Transaction txn = db.startTransaction(false);
-		try {
-			for (PrivateGroupHook hook : hooks) {
-				hook.removingGroup(txn, g);
-			}
-			Group group = db.getGroup(txn, g);
-			db.removeGroup(txn, group);
-			db.commitTransaction(txn);
-		} finally {
-			db.endTransaction(txn);
+	public void removePrivateGroup(Transaction txn, GroupId g)
+			throws DbException {
+		for (PrivateGroupHook hook : hooks) {
+			hook.removingGroup(txn, g);
 		}
+		Group group = db.getGroup(txn, g);
+		db.removeGroup(txn, group);
+	}
+
+	@Override
+	public void removePrivateGroup(GroupId g) throws DbException {
+		db.transaction(false, txn -> removePrivateGroup(txn, g));
 	}
 
 	@Override
 	public MessageId getPreviousMsgId(GroupId g) throws DbException {
-		MessageId previousMsgId;
-		Transaction txn = db.startTransaction(true);
-		try {
-			previousMsgId = getPreviousMsgId(txn, g);
-			db.commitTransaction(txn);
-		} catch (FormatException e) {
-			throw new DbException(e);
-		} finally {
-			db.endTransaction(txn);
-		}
-		return previousMsgId;
+		return db.transactionWithResult(true,
+				txn -> getPreviousMsgId(txn, g));
 	}
 
-	private MessageId getPreviousMsgId(Transaction txn, GroupId g)
-			throws DbException, FormatException {
-		BdfDictionary d = clientHelper.getGroupMetadataAsDictionary(txn, g);
-		byte[] previousMsgIdBytes = d.getRaw(KEY_PREVIOUS_MSG_ID);
-		return new MessageId(previousMsgIdBytes);
+	public MessageId getPreviousMsgId(Transaction txn, GroupId g)
+			throws DbException {
+		try {
+			BdfDictionary d = clientHelper.getGroupMetadataAsDictionary(txn, g);
+			byte[] previousMsgIdBytes = d.getRaw(KEY_PREVIOUS_MSG_ID);
+			return new MessageId(previousMsgIdBytes);
+		} catch (FormatException e) {
+			throw new DbException(e);
+		}
 	}
 
 	private void setPreviousMsgId(Transaction txn, GroupId g,
@@ -287,6 +283,13 @@ class PrivateGroupManagerImpl extends BdfIncomingMessageHook
 	}
 
 	@Override
+	public boolean isOurPrivateGroup(Transaction txn, PrivateGroup g)
+			throws DbException {
+		LocalAuthor localAuthor = identityManager.getLocalAuthor(txn);
+		return localAuthor.getId().equals(g.getCreator().getId());
+	}
+
+	@Override
 	public Collection<PrivateGroup> getPrivateGroups() throws DbException {
 		return db.transactionWithResult(true, this::getPrivateGroups);
 	}
@@ -358,7 +361,7 @@ class PrivateGroupManagerImpl extends BdfIncomingMessageHook
 			// parse the metadata
 			for (Entry<MessageId, BdfDictionary> entry : metadata.entrySet()) {
 				BdfDictionary meta = entry.getValue();
-				if (meta.getLong(KEY_TYPE) == JOIN.getInt()) {
+				if (meta.getInt(KEY_TYPE) == JOIN.getInt()) {
 					headers.add(getJoinMessageHeader(txn, g, entry.getKey(),
 							meta, authorInfos));
 				} else {
@@ -476,10 +479,15 @@ class PrivateGroupManagerImpl extends BdfIncomingMessageHook
 	}
 
 	@Override
+	public void setReadFlag(Transaction txn, GroupId g, MessageId m,
+			boolean read) throws DbException {
+		messageTracker.setReadFlag(txn, g, m, read);
+	}
+
+	@Override
 	public void setReadFlag(GroupId g, MessageId m, boolean read)
 			throws DbException {
-		db.transaction(false, txn ->
-				messageTracker.setReadFlag(txn, g, m, read));
+		db.transaction(false, txn -> setReadFlag(txn, g, m, read));
 	}
 
 	@Override
@@ -518,18 +526,18 @@ class PrivateGroupManagerImpl extends BdfIncomingMessageHook
 	}
 
 	@Override
-	protected boolean incomingMessage(Transaction txn, Message m, BdfList body,
-			BdfDictionary meta) throws DbException, FormatException {
+	protected DeliveryAction incomingMessage(Transaction txn, Message m,
+			BdfList body, BdfDictionary meta)
+			throws DbException, FormatException {
 
-		MessageType type =
-				MessageType.valueOf(meta.getLong(KEY_TYPE).intValue());
+		MessageType type = MessageType.valueOf(meta.getInt(KEY_TYPE));
 		switch (type) {
 			case JOIN:
 				handleJoinMessage(txn, m, meta);
-				return true;
+				return ACCEPT_SHARE;
 			case POST:
 				handleGroupMessage(txn, m, meta);
-				return true;
+				return ACCEPT_SHARE;
 			default:
 				// the validator should only let valid types pass
 				throw new RuntimeException("Unknown MessageType");
@@ -567,8 +575,8 @@ class PrivateGroupManagerImpl extends BdfIncomingMessageHook
 					.getMessageMetadataAsDictionary(txn, parentId);
 			if (timestamp <= parentMeta.getLong(KEY_TIMESTAMP))
 				throw new FormatException();
-			MessageType parentType = MessageType
-					.valueOf(parentMeta.getLong(KEY_TYPE).intValue());
+			MessageType parentType =
+					MessageType.valueOf(parentMeta.getInt(KEY_TYPE));
 			if (parentType != POST)
 				throw new FormatException();
 		}
@@ -583,8 +591,8 @@ class PrivateGroupManagerImpl extends BdfIncomingMessageHook
 		if (!getAuthor(meta).equals(getAuthor(previousMeta)))
 			throw new FormatException();
 		// previous message must be a POST or JOIN
-		MessageType previousType = MessageType
-				.valueOf(previousMeta.getLong(KEY_TYPE).intValue());
+		MessageType previousType =
+				MessageType.valueOf(previousMeta.getInt(KEY_TYPE));
 		if (previousType != JOIN && previousType != POST)
 			throw new FormatException();
 		// track message and broadcast event
@@ -632,8 +640,7 @@ class PrivateGroupManagerImpl extends BdfIncomingMessageHook
 
 	private Visibility getVisibility(BdfDictionary meta)
 			throws FormatException {
-		return Visibility
-				.valueOf(meta.getLong(GROUP_KEY_VISIBILITY).intValue());
+		return Visibility.valueOf(meta.getInt(GROUP_KEY_VISIBILITY));
 	}
 
 }

@@ -1,11 +1,11 @@
 package org.briarproject.bramble.plugin.tcp;
 
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.plugin.Backoff;
 import org.briarproject.bramble.api.plugin.PluginCallback;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.properties.TransportProperties;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -35,7 +35,7 @@ class WanTcpPlugin extends TcpPlugin {
 			Backoff backoff,
 			PortMapper portMapper,
 			PluginCallback callback,
-			int maxLatency,
+			long maxLatency,
 			int maxIdleTime,
 			int connectionTimeout) {
 		super(ioExecutor, wakefulIoExecutor, backoff, callback, maxLatency,

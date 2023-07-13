@@ -4,8 +4,9 @@ import org.briarproject.bramble.api.crypto.SecretKey;
 import org.briarproject.bramble.api.db.DatabaseComponent;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.system.Wakeful;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.concurrent.ExecutorService;
 
@@ -22,6 +23,7 @@ public interface LifecycleManager {
 	 */
 	enum StartResult {
 		ALREADY_RUNNING,
+		CLOCK_ERROR,
 		DB_ERROR,
 		DATA_TOO_OLD_ERROR,
 		DATA_TOO_NEW_ERROR,
@@ -35,8 +37,14 @@ public interface LifecycleManager {
 	 */
 	enum LifecycleState {
 
-		STARTING, MIGRATING_DATABASE, COMPACTING_DATABASE, STARTING_SERVICES,
-		RUNNING, STOPPING;
+		CREATED,
+		STARTING,
+		MIGRATING_DATABASE,
+		COMPACTING_DATABASE,
+		STARTING_SERVICES,
+		RUNNING,
+		STOPPING,
+		STOPPED;
 
 		public boolean isAfter(LifecycleState state) {
 			return ordinal() > state.ordinal();
@@ -65,6 +73,10 @@ public interface LifecycleManager {
 	/**
 	 * Opens the {@link DatabaseComponent} using the given key and starts any
 	 * registered {@link Service Services}.
+	 *
+	 * @return {@link StartResult#CLOCK_ERROR} if the system clock is earlier
+	 * than {@link Clock#MIN_REASONABLE_TIME_MS} or later than
+	 * {@link Clock#MAX_REASONABLE_TIME_MS}.
 	 */
 	@Wakeful
 	StartResult startServices(SecretKey dbKey);

@@ -3,10 +3,10 @@ package org.briarproject.bramble.plugin.bluetooth;
 import android.app.Application;
 import android.bluetooth.BluetoothSocket;
 
+import org.briarproject.android.dontkillmelib.wakelock.AndroidWakeLockManager;
 import org.briarproject.bramble.api.event.EventBus;
 import org.briarproject.bramble.api.io.TimeoutMonitor;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.Backoff;
 import org.briarproject.bramble.api.plugin.BackoffFactory;
 import org.briarproject.bramble.api.plugin.PluginCallback;
@@ -14,9 +14,9 @@ import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.plugin.duplex.DuplexPlugin;
 import org.briarproject.bramble.api.plugin.duplex.DuplexPluginFactory;
 import org.briarproject.bramble.api.system.AndroidExecutor;
-import org.briarproject.bramble.api.system.AndroidWakeLockManager;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.system.WakefulIoExecutor;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.security.SecureRandom;
 import java.util.concurrent.Executor;
@@ -47,7 +47,7 @@ public class AndroidBluetoothPluginFactory implements DuplexPluginFactory {
 	private final BackoffFactory backoffFactory;
 
 	@Inject
-	public AndroidBluetoothPluginFactory(@IoExecutor Executor ioExecutor,
+	AndroidBluetoothPluginFactory(@IoExecutor Executor ioExecutor,
 			@WakefulIoExecutor Executor wakefulIoExecutor,
 			AndroidExecutor androidExecutor,
 			AndroidWakeLockManager wakeLockManager,
@@ -75,7 +75,7 @@ public class AndroidBluetoothPluginFactory implements DuplexPluginFactory {
 	}
 
 	@Override
-	public int getMaxLatency() {
+	public long getMaxLatency() {
 		return MAX_LATENCY;
 	}
 

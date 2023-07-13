@@ -2,12 +2,12 @@ package org.briarproject.bramble.plugin.bluetooth;
 
 import android.bluetooth.BluetoothSocket;
 
+import org.briarproject.android.dontkillmelib.wakelock.AndroidWakeLock;
+import org.briarproject.android.dontkillmelib.wakelock.AndroidWakeLockManager;
 import org.briarproject.bramble.api.io.TimeoutMonitor;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.Plugin;
 import org.briarproject.bramble.api.plugin.duplex.AbstractDuplexTransportConnection;
-import org.briarproject.bramble.api.system.AndroidWakeLock;
-import org.briarproject.bramble.api.system.AndroidWakeLockManager;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,8 +33,10 @@ class AndroidBluetoothTransportConnection
 		super(plugin);
 		this.connectionLimiter = connectionLimiter;
 		this.socket = socket;
-		in = timeoutMonitor.createTimeoutInputStream(
-				socket.getInputStream(), plugin.getMaxIdleTime() * 2);
+		InputStream socketIn = socket.getInputStream();
+		if (socketIn == null) throw new IOException();
+		in = timeoutMonitor.createTimeoutInputStream(socketIn,
+				plugin.getMaxIdleTime() * 2L);
 		wakeLock = wakeLockManager.createWakeLock("BluetoothConnection");
 		wakeLock.acquire();
 		String address = socket.getRemoteDevice().getAddress();
@@ -48,7 +50,9 @@ class AndroidBluetoothTransportConnection
 
 	@Override
 	protected OutputStream getOutputStream() throws IOException {
-		return socket.getOutputStream();
+		OutputStream socketOut = socket.getOutputStream();
+		if (socketOut == null) throw new IOException();
+		return socketOut;
 	}
 
 	@Override

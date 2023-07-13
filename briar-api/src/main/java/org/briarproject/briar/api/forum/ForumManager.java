@@ -4,11 +4,11 @@ import org.briarproject.bramble.api.crypto.CryptoExecutor;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
 import org.briarproject.bramble.api.identity.LocalAuthor;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.ClientId;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.briar.api.client.MessageTracker.GroupCount;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.Collection;
 import java.util.List;
@@ -47,6 +47,11 @@ public interface ForumManager {
 	 * Unsubscribes from a forum.
 	 */
 	void removeForum(Forum f) throws DbException;
+
+	/**
+	 * Unsubscribes from a forum.
+	 */
+	void removeForum(Transaction txn, Forum f) throws DbException;
 
 	/**
 	 * Creates a local forum post.
@@ -126,6 +131,11 @@ public interface ForumManager {
 	 * Marks a message as read or unread and updates the group count.
 	 */
 	void setReadFlag(GroupId g, MessageId m, boolean read) throws DbException;
+
+	/**
+	 * Marks a message as read or unread and updates the group count.
+	 */
+	void setReadFlag(Transaction txn, GroupId g, MessageId m, boolean read) throws DbException;
 
 	interface RemoveForumHook {
 		/**

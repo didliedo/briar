@@ -9,7 +9,6 @@ import org.briarproject.bramble.api.db.DatabaseComponent;
 import org.briarproject.bramble.api.db.DatabaseExecutor;
 import org.briarproject.bramble.api.db.DbException;
 import org.briarproject.bramble.api.db.Transaction;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.plugin.TransportId;
 import org.briarproject.bramble.api.system.Clock;
 import org.briarproject.bramble.api.system.TaskScheduler;
@@ -19,6 +18,7 @@ import org.briarproject.bramble.api.transport.StreamContext;
 import org.briarproject.bramble.api.transport.TransportKeySet;
 import org.briarproject.bramble.api.transport.TransportKeys;
 import org.briarproject.bramble.transport.ReorderingWindow.Change;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -37,12 +37,12 @@ import javax.annotation.concurrent.ThreadSafe;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
-import static org.briarproject.bramble.api.nullsafety.NullSafety.requireExactlyOneNull;
 import static org.briarproject.bramble.api.transport.TransportConstants.MAX_CLOCK_DIFFERENCE;
 import static org.briarproject.bramble.api.transport.TransportConstants.PROTOCOL_VERSION;
 import static org.briarproject.bramble.api.transport.TransportConstants.TAG_LENGTH;
 import static org.briarproject.bramble.util.ByteUtils.MAX_32_BIT_UNSIGNED;
 import static org.briarproject.bramble.util.LogUtils.logException;
+import static org.briarproject.nullsafety.NullSafety.requireExactlyOneNull;
 
 @ThreadSafe
 @NotNullByDefault
@@ -393,53 +393,79 @@ class TransportKeyManagerImpl implements TransportKeyManager {
 			throws DbException {
 		lock.lock();
 		try {
-			// Look up the incoming keys for the tag
-			TagContext tagCtx = inContexts.remove(new Bytes(tag));
-			if (tagCtx == null) return null;
-			MutableIncomingKeys inKeys = tagCtx.inKeys;
-			// Create a stream context
-			StreamContext ctx = new StreamContext(tagCtx.contactId,
-					tagCtx.pendingContactId, transportId,
-					inKeys.getTagKey(), inKeys.getHeaderKey(),
-					tagCtx.streamNumber, tagCtx.handshakeMode);
-			// Update the reordering window
-			ReorderingWindow window = inKeys.getWindow();
-			Change change = window.setSeen(tagCtx.streamNumber);
-			// Add tags for any stream numbers added to the window
-			for (long streamNumber : change.getAdded()) {
-				byte[] addTag = new byte[TAG_LENGTH];
-				transportCrypto.encodeTag(addTag, inKeys.getTagKey(),
-						PROTOCOL_VERSION, streamNumber);
-				TagContext tagCtx1 = new TagContext(tagCtx.keySetId,
-						tagCtx.contactId, tagCtx.pendingContactId, inKeys,
-						streamNumber, tagCtx.handshakeMode);
-				inContexts.put(new Bytes(addTag), tagCtx1);
-			}
-			// Remove tags for any stream numbers removed from the window
-			for (long streamNumber : change.getRemoved()) {
-				if (streamNumber == tagCtx.streamNumber) continue;
-				byte[] removeTag = new byte[TAG_LENGTH];
-				transportCrypto.encodeTag(removeTag, inKeys.getTagKey(),
-						PROTOCOL_VERSION, streamNumber);
-				inContexts.remove(new Bytes(removeTag));
-			}
-			// Write the window back to the DB
-			db.setReorderingWindow(txn, tagCtx.keySetId, transportId,
-					inKeys.getTimePeriod(), window.getBase(),
-					window.getBitmap());
-			// If the outgoing keys are inactive, activate them
-			MutableTransportKeySet ks = keys.get(tagCtx.keySetId);
-			MutableOutgoingKeys outKeys =
-					ks.getKeys().getCurrentOutgoingKeys();
-			if (!outKeys.isActive()) {
-				LOG.info("Activating outgoing keys");
-				outKeys.activate();
-				considerReplacingOutgoingKeys(ks);
-				db.setTransportKeysActive(txn, transportId, tagCtx.keySetId);
-			}
+			StreamContext ctx = streamContextFromTag(tag);
+			if (ctx == null) return null;
+			markTagAsRecognised(txn, tag);
 			return ctx;
 		} finally {
 			lock.unlock();
+		}
+	}
+
+	@Override
+	public StreamContext getStreamContextOnly(Transaction txn, byte[] tag) {
+		lock.lock();
+		try {
+			return streamContextFromTag(tag);
+		} finally {
+			lock.unlock();
+		}
+	}
+
+	@GuardedBy("lock")
+	@Nullable
+	private StreamContext streamContextFromTag(byte[] tag) {
+		// Look up the incoming keys for the tag
+		TagContext tagCtx = inContexts.get(new Bytes(tag));
+		if (tagCtx == null) return null;
+		MutableIncomingKeys inKeys = tagCtx.inKeys;
+		// Create a stream context
+		return new StreamContext(tagCtx.contactId,
+				tagCtx.pendingContactId, transportId,
+				inKeys.getTagKey(), inKeys.getHeaderKey(),
+				tagCtx.streamNumber, tagCtx.handshakeMode);
+	}
+
+	@Override
+	public void markTagAsRecognised(Transaction txn, byte[] tag)
+			throws DbException {
+		TagContext tagCtx = inContexts.remove(new Bytes(tag));
+		if (tagCtx == null) return;
+		MutableIncomingKeys inKeys = tagCtx.inKeys;
+		// Update the reordering window
+		ReorderingWindow window = inKeys.getWindow();
+		Change change = window.setSeen(tagCtx.streamNumber);
+		// Add tags for any stream numbers added to the window
+		for (long streamNumber : change.getAdded()) {
+			byte[] addTag = new byte[TAG_LENGTH];
+			transportCrypto.encodeTag(addTag, inKeys.getTagKey(),
+					PROTOCOL_VERSION, streamNumber);
+			TagContext tagCtx1 = new TagContext(tagCtx.keySetId,
+					tagCtx.contactId, tagCtx.pendingContactId, inKeys,
+					streamNumber, tagCtx.handshakeMode);
+			inContexts.put(new Bytes(addTag), tagCtx1);
+		}
+		// Remove tags for any stream numbers removed from the window
+		for (long streamNumber : change.getRemoved()) {
+			if (streamNumber == tagCtx.streamNumber) continue;
+			byte[] removeTag = new byte[TAG_LENGTH];
+			transportCrypto.encodeTag(removeTag, inKeys.getTagKey(),
+					PROTOCOL_VERSION, streamNumber);
+			inContexts.remove(new Bytes(removeTag));
+		}
+		// Write the window back to the DB
+		db.setReorderingWindow(txn, tagCtx.keySetId, transportId,
+				inKeys.getTimePeriod(), window.getBase(),
+				window.getBitmap());
+		// If the outgoing keys are inactive, activate them
+		MutableTransportKeySet ks = keys.get(tagCtx.keySetId);
+		MutableOutgoingKeys outKeys =
+				ks.getKeys().getCurrentOutgoingKeys();
+		if (!outKeys.isActive()) {
+			LOG.info("Activating outgoing keys");
+			outKeys.activate();
+			considerReplacingOutgoingKeys(ks);
+			db.setTransportKeysActive(txn, transportId, tagCtx.keySetId);
 		}
 	}
 

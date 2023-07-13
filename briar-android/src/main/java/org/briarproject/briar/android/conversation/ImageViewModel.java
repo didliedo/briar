@@ -1,6 +1,7 @@
 package org.briarproject.briar.android.conversation;
 
 import android.app.Application;
+import android.content.ContentResolver;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.view.View;
@@ -13,7 +14,6 @@ import org.briarproject.bramble.api.event.EventBus;
 import org.briarproject.bramble.api.event.EventListener;
 import org.briarproject.bramble.api.lifecycle.IoExecutor;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.bramble.api.system.AndroidExecutor;
 import org.briarproject.briar.android.attachment.AttachmentItem;
@@ -23,6 +23,7 @@ import org.briarproject.briar.android.viewmodel.MutableLiveEvent;
 import org.briarproject.briar.api.attachment.Attachment;
 import org.briarproject.briar.api.attachment.AttachmentReader;
 import org.briarproject.briar.api.messaging.event.AttachmentReceivedEvent;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,7 +34,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.concurrent.Executor;
 import java.util.logging.Logger;
 
@@ -45,6 +45,7 @@ import androidx.annotation.UiThread;
 import static android.media.MediaScannerConnection.scanFile;
 import static android.os.Environment.DIRECTORY_PICTURES;
 import static android.os.Environment.getExternalStoragePublicDirectory;
+import static java.util.Locale.US;
 import static java.util.Objects.requireNonNull;
 import static java.util.logging.Level.WARNING;
 import static java.util.logging.Logger.getLogger;
@@ -111,7 +112,7 @@ public class ImageViewModel extends DbViewModel implements EventListener {
 	}
 
 	@UiThread
-	public void expectAttachments(List<AttachmentItem> attachments) {
+	void expectAttachments(List<AttachmentItem> attachments) {
 		for (AttachmentItem item : attachments) {
 			// no need to track items that are in a final state already
 			if (item.getState().isFinal()) continue;
@@ -179,10 +180,15 @@ public class ImageViewModel extends DbViewModel implements EventListener {
 	@UiThread
 	void saveImage(AttachmentItem attachment, @Nullable Uri uri) {
 		if (uri == null) {
-			saveState.setEvent(true);
+			onSaveImageError();
 		} else {
 			saveImage(attachment, () -> getOutputStream(uri), null);
 		}
+	}
+
+	@UiThread
+	void onSaveImageError() {
+		saveState.setEvent(true);
 	}
 
 	/**
@@ -226,8 +232,7 @@ public class ImageViewModel extends DbViewModel implements EventListener {
 	}
 
 	String getFileName() {
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd",
-				Locale.getDefault());
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd_HHmmss", US);
 		return sdf.format(new Date());
 	}
 
@@ -250,8 +255,8 @@ public class ImageViewModel extends DbViewModel implements EventListener {
 	}
 
 	private OutputStream getOutputStream(Uri uri) throws IOException {
-		OutputStream os =
-				getApplication().getContentResolver().openOutputStream(uri);
+		ContentResolver contentResolver = getApplication().getContentResolver();
+		OutputStream os = contentResolver.openOutputStream(uri, "wt");
 		if (os == null) throw new IOException();
 		return os;
 	}

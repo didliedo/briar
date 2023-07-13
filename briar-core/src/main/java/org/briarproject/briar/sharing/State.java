@@ -1,8 +1,8 @@
 package org.briarproject.briar.sharing;
 
 import org.briarproject.bramble.api.FormatException;
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
 import org.briarproject.bramble.api.sync.Group.Visibility;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import javax.annotation.concurrent.Immutable;
 
@@ -44,10 +44,6 @@ enum State {
 
 	public Visibility getVisibility() {
 		return visibility;
-	}
-
-	public boolean canInvite() {
-		return this == START;
 	}
 
 	public boolean isAwaitingResponse() {

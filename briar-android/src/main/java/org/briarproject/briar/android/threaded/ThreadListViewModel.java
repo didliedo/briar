@@ -5,14 +5,13 @@ import android.app.Application;
 import org.briarproject.bramble.api.crypto.CryptoExecutor;
 import org.briarproject.bramble.api.db.DatabaseExecutor;
 import org.briarproject.bramble.api.db.DbException;
+import org.briarproject.bramble.api.db.NoSuchGroupException;
 import org.briarproject.bramble.api.db.TransactionManager;
 import org.briarproject.bramble.api.event.Event;
 import org.briarproject.bramble.api.event.EventBus;
 import org.briarproject.bramble.api.event.EventListener;
 import org.briarproject.bramble.api.identity.IdentityManager;
 import org.briarproject.bramble.api.lifecycle.LifecycleManager;
-import org.briarproject.bramble.api.nullsafety.MethodsNotNullByDefault;
-import org.briarproject.bramble.api.nullsafety.ParametersNotNullByDefault;
 import org.briarproject.bramble.api.sync.GroupId;
 import org.briarproject.bramble.api.sync.MessageId;
 import org.briarproject.bramble.api.sync.event.GroupRemovedEvent;
@@ -26,6 +25,8 @@ import org.briarproject.briar.api.android.AndroidNotificationManager;
 import org.briarproject.briar.api.client.MessageTracker;
 import org.briarproject.briar.api.client.MessageTree;
 import org.briarproject.briar.client.MessageTreeImpl;
+import org.briarproject.nullsafety.MethodsNotNullByDefault;
+import org.briarproject.nullsafety.ParametersNotNullByDefault;
 
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -215,11 +216,15 @@ public abstract class ThreadListViewModel<I extends ThreadItem>
 		return replyId;
 	}
 
+	@UiThread
 	void storeMessageId(@Nullable MessageId messageId) {
 		if (messageId != null) {
 			runOnDbThread(() -> {
 				try {
 					messageTracker.storeMessageId(groupId, messageId);
+				} catch (NoSuchGroupException e) {
+					// This can happen when the activity is closed
+					// after deleting the group. So just ignore this case.
 				} catch (DbException e) {
 					handleException(e);
 				}

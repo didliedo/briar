@@ -1,12 +1,11 @@
 package org.briarproject.briar.android.widget;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.widget.LinearLayout;
 
-import org.briarproject.bramble.api.nullsafety.NotNullByDefault;
+import org.briarproject.nullsafety.NotNullByDefault;
 
 import androidx.annotation.Nullable;
 
@@ -27,7 +26,6 @@ public class TouchInterceptingLinearLayout extends LinearLayout {
 		super(context, attrs, defStyleAttr);
 	}
 
-	@TargetApi(21)
 	public TouchInterceptingLinearLayout(Context context, AttributeSet attrs,
 			int defStyleAttr, int defStyleRes) {
 		super(context, attrs, defStyleAttr, defStyleRes);
