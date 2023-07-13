@@ -13,25 +13,25 @@ class BlogControllerIntegrationTest: IntegrationTest() {
     @Test
     fun `get blog posts`() {
         val response = get("$url/blogs/posts")
-        assertEquals(200, response.statusCode)
+        assertEquals(200, response.code)
     }
 
     @Test
     fun `posting a blog post`() {
         val response = post("$url/blogs/posts","{\"text\":\"Hello!\"}")
-        assertEquals(200, response.statusCode)
+        assertEquals(200, response.code)
     }
 
     @Test
     fun `posting a blog needs authentication token`() {
         val response = postWithWrongToken("$url/blogs/posts")
-        assertEquals(401, response.statusCode)
+        assertEquals(401, response.code)
     }
 
     @Test
     fun `get blog posts needs authentication token`() {
         val response = getWithWrongToken("$url/blogs/posts")
-        assertEquals(401, response.statusCode)
+        assertEquals(401, response.code)
     }
 
 }
