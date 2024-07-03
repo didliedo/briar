@@ -100,8 +100,29 @@ constructor(
                     delete { ctx -> messagingController.deleteAllMessages(ctx) }
                 }
                 path("/forums") {
-                    get { ctx -> forumController.list(ctx) }
-                    post { ctx -> forumController.create(ctx) }
+                    get { ctx -> forumController.list(ctx) } // done
+                    post { ctx -> forumController.create(ctx) } // done
+                    path("/:forumId") {
+                        get { ctx -> forumController.get(ctx) } // to do
+                        put { ctx -> forumController.update(ctx) } // to do
+                        delete { ctx -> forumController.delete(ctx) } // to do
+                        path("/posts/count") {
+                            get { ctx -> forumController.getPostCount(ctx) } // done
+                        }
+                    }
+                    path("/add") {
+                        path("link") {
+                            get { ctx -> forumController.getLink(ctx) } // to do
+                        }
+                        path("pending") {
+                            get { ctx -> forumController.listPendingForums(ctx) } // done
+                            post { ctx -> forumController.addPendingForum(ctx) } // done
+                            delete { ctx -> forumController.removePendingForum(ctx) } // to do
+                        }
+                    }
+                    path("/accept") {
+                        post { ctx -> forumController.acceptPendingForum(ctx) } // done
+                    }
                 }
                 path("/blogs") {
                     path("/posts") {
@@ -110,7 +131,7 @@ constructor(
                     }
                 }
             }
-        }
+        }        
         app.ws(WS) { ws ->
             if (logger.isLoggable(INFO)) ws.onConnect { ctx ->
                 logger.info("Received websocket connection from ${ctx.session.remoteAddress}")

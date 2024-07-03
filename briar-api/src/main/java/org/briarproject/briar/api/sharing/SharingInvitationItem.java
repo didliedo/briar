@@ -24,4 +24,8 @@ public class SharingInvitationItem extends InvitationItem<Shareable> {
 		return newSharers;
 	}
 
+	public boolean isSubscribed() {
+        return super.isSubscribed();
+    }
+
 }
