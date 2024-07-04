@@ -25,6 +25,10 @@ import static org.briarproject.bramble.api.transport.TransportConstants.STREAM_H
 import static org.briarproject.bramble.util.ByteUtils.INT_16_BYTES;
 import static org.briarproject.bramble.util.ByteUtils.INT_64_BYTES;
 
+/**
+ * See the BTP-Specs to understand whats going on here
+ * https://code.briarproject.org/briar/briar-spec/blob/master/protocols/BTP.md
+ */
 @NotThreadSafe
 @NotNullByDefault
 class StreamEncrypterImpl implements StreamEncrypter {
@@ -81,9 +85,9 @@ class StreamEncrypterImpl implements StreamEncrypter {
 		FrameEncoder.encodeNonce(frameNonce, frameNumber, true);
 		try {
 			cipher.init(true, frameKey, frameNonce);
-			int encrypted = cipher.process(frameHeader, 0,
+			int encryptedLength = cipher.process(frameHeader, 0,
 					FRAME_HEADER_PLAINTEXT_LENGTH, frameCiphertext, 0);
-			if (encrypted != FRAME_HEADER_LENGTH) throw new RuntimeException();
+			if (encryptedLength != FRAME_HEADER_LENGTH) throw new RuntimeException();
 		} catch (GeneralSecurityException badCipher) {
 			throw new RuntimeException(badCipher);
 		}
@@ -129,10 +133,10 @@ class StreamEncrypterImpl implements StreamEncrypter {
 		// Encrypt and authenticate the stream header key
 		try {
 			cipher.init(true, streamHeaderKey, streamHeaderNonce);
-			int encrypted = cipher.process(streamHeaderPlaintext, 0,
+			int encryptedLength = cipher.process(streamHeaderPlaintext, 0,
 					STREAM_HEADER_PLAINTEXT_LENGTH, streamHeaderCiphertext,
 					STREAM_HEADER_NONCE_LENGTH);
-			if (encrypted != STREAM_HEADER_PLAINTEXT_LENGTH + MAC_LENGTH)
+			if (encryptedLength != STREAM_HEADER_PLAINTEXT_LENGTH + MAC_LENGTH)
 				throw new RuntimeException();
 		} catch (GeneralSecurityException badCipher) {
 			throw new RuntimeException(badCipher);
