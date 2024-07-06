@@ -499,6 +499,8 @@ class BlogManagerImpl extends BdfIncomingMessageHook implements BlogManager,
 			// Type, copied group descriptor, copied timestamp, copied text,
 			// copied signature
 			return message.getString(3);
+		} else if (type == COMMENT) {
+			return message.getString(1);
 		} else {
 			throw new FormatException();
 		}
